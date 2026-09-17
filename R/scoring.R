@@ -95,7 +95,7 @@
   })
   groups_use <- lapply(meta, `[[`, "matched")
   chunk_size <- as.integer(params$chunk_size %||% 2000L)
-  chunks <- scworkbench::wb_partition_axis(cells, chunk_size)
+  chunks <- .gp_partition_axis(cells, chunk_size)
   matrix_id <- NULL
   pieces <- lapply(chunks, function(chunk_cells) {
     primitive <- readers$matrix_chunks(features = universe, cells = chunk_cells)

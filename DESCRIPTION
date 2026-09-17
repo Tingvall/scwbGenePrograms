@@ -9,6 +9,6 @@ Description: Explicitly activated ABI v3 operation pack providing gene-program
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
-Imports: scworkbench, jsonlite, Matrix, stats, utils
+Imports: scworkbench, jsonlite, Matrix, methods, stats, utils
 Suggests: BiocParallel, devtools, RANN, UCell
 RoxygenNote: 7.3.3
