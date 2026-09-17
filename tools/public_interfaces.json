@@ -1,0 +1,645 @@
+{
+  "addmodulescore": {
+    "intent": [
+      "expression",
+      "signature",
+      "score"
+    ],
+    "inputs": [
+      {
+        "name": "matrix",
+        "label": "matrix",
+        "help": "Typed matrix input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "features",
+        "type": "list",
+        "help": "Module feature IDs: character vector or list of vectors."
+      },
+      {
+        "name": "pool",
+        "type": "string_vec",
+        "help": "Optional control feature pool; defaults to all matrix features."
+      },
+      {
+        "name": "nbin",
+        "type": "int",
+        "help": "Number of expression bins for control matching."
+      },
+      {
+        "name": "ctrl",
+        "type": "int",
+        "help": "Control features sampled per module feature."
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "help": "Prefix for module names when features are unnamed."
+      },
+      {
+        "name": "seed",
+        "type": "int",
+        "help": "Random seed for control sampling."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "module_scores",
+        "description": "Per-cell module scores for one or more signatures."
+      }
+    ]
+  },
+  "ucell": {
+    "intent": [
+      "expression",
+      "signature",
+      "score"
+    ],
+    "inputs": [
+      {
+        "name": "matrix",
+        "label": "matrix",
+        "help": "Typed matrix input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "features",
+        "type": "list",
+        "help": "Signature feature IDs: character vector or list of vectors."
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "help": "Prefix for signature names when features are unnamed."
+      },
+      {
+        "name": "max_rank",
+        "type": "int",
+        "help": "Maximum rank considered by UCell."
+      },
+      {
+        "name": "ncores",
+        "type": "int",
+        "help": "Number of worker processes requested by UCell."
+      },
+      {
+        "name": "parallel_backend",
+        "type": "choice",
+        "help": "Execution backend for UCell. Use 'serial' to avoid socket-based parallel backends on constrained systems."
+      },
+      {
+        "name": "chunk_size",
+        "type": "int",
+        "help": "Cell-axis chunk size for engine-owned UCell execution. Use NULL to disable chunking."
+      },
+      {
+        "name": "missing_features_policy",
+        "type": "choice",
+        "help": "How to handle signature features missing from the matrix."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "signature_scores",
+        "description": "Per-cell UCell scores for one or more signatures."
+      },
+      {
+        "name": "signature_summary",
+        "description": "Per-signature scoring summary and feature-match diagnostics."
+      }
+    ]
+  },
+  "cell_vector_family_reduce": {
+    "intent": [
+      "label",
+      "reduce",
+      "signal"
+    ],
+    "inputs": [
+      {
+        "name": "signal",
+        "label": "signal",
+        "help": "Typed signal input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "signal_keys",
+        "type": "string_vec",
+        "help": "Optional signal-key subset within the cell_vector_family."
+      },
+      {
+        "name": "rule",
+        "type": "choice",
+        "help": "Reduction rule used to choose one label per cell."
+      },
+      {
+        "name": "min_score",
+        "type": "dbl",
+        "help": "Optional minimum winning score required to emit a non-unknown label."
+      },
+      {
+        "name": "min_margin",
+        "type": "dbl",
+        "help": "Optional minimum top-vs-second margin required to emit a non-unknown label."
+      },
+      {
+        "name": "unknown_label",
+        "type": "string",
+        "help": "Fallback label emitted when thresholds or ties abstain."
+      },
+      {
+        "name": "ties",
+        "type": "choice",
+        "help": "How to handle tied top scores."
+      },
+      {
+        "name": "tie_tol",
+        "type": "dbl",
+        "help": "Tolerance used when detecting ties."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "label",
+        "description": "Per-cell categorical labels after reducing the signal family."
+      },
+      {
+        "name": "top_score",
+        "description": "Winning score for each cell."
+      },
+      {
+        "name": "runner_up_score",
+        "description": "Second-best score for each cell."
+      },
+      {
+        "name": "score_margin",
+        "description": "Winning minus runner-up score for each cell."
+      },
+      {
+        "name": "abstain_reason",
+        "description": "Per-cell abstention reason (`none`, `tie`, `min_score`, `min_margin`)."
+      },
+      {
+        "name": "decision_table",
+        "description": "Per-cell reduction diagnostics including label, scores, margin, and abstention reason."
+      },
+      {
+        "name": "label_summary",
+        "description": "Per-label counts and score summaries after reduction."
+      }
+    ]
+  },
+  "cell_vector_family_calibrate": {
+    "intent": [
+      "signal",
+      "calibrate",
+      "normalize"
+    ],
+    "inputs": [
+      {
+        "name": "signal",
+        "label": "signal",
+        "help": "Typed signal input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "signal_keys",
+        "type": "string_vec",
+        "help": "Optional signal-key subset within the cell_vector_family."
+      },
+      {
+        "name": "method",
+        "type": "choice",
+        "help": "Calibration method applied independently within each key."
+      },
+      {
+        "name": "center",
+        "type": "bool",
+        "help": "For z-score calibration, subtract the fitted center."
+      },
+      {
+        "name": "scale",
+        "type": "bool",
+        "help": "For z-score calibration, divide by the fitted scale."
+      },
+      {
+        "name": "ties_method",
+        "type": "choice",
+        "help": "Rank tie handling for percentile calibration."
+      },
+      {
+        "name": "na_rm",
+        "type": "bool",
+        "help": "Ignore non-finite values when fitting calibration."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "calibrated_signal",
+        "description": "Calibrated per-cell values for each key in the signal family."
+      },
+      {
+        "name": "calibration_summary",
+        "description": "Per-key calibration statistics for raw and calibrated values."
+      }
+    ]
+  },
+  "cell_vector_family_qc": {
+    "intent": [
+      "signal",
+      "qc",
+      "diagnostics"
+    ],
+    "inputs": [
+      {
+        "name": "signal",
+        "label": "signal",
+        "help": "Typed signal input."
+      },
+      {
+        "name": "grouping",
+        "label": "grouping",
+        "help": "Typed grouping input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "signal_keys",
+        "type": "string_vec",
+        "help": "Optional signal-key subset within the cell_vector_family."
+      },
+      {
+        "name": "correlation_methods",
+        "type": "string_vec",
+        "help": "Pairwise correlation methods to compute between keys."
+      },
+      {
+        "name": "tie_tol",
+        "type": "dbl",
+        "help": "Tolerance used when counting tied top-key winners."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "key_summary",
+        "description": "Per-key QC summaries including score distribution, finite coverage, and winner frequencies."
+      },
+      {
+        "name": "pairwise_summary",
+        "description": "Pairwise key relationships including overlap counts and correlations."
+      },
+      {
+        "name": "group_summary",
+        "description": "Per-group per-key QC summaries when an optional grouping vector is supplied."
+      }
+    ]
+  },
+  "cell_vector_family_graph_smooth": {
+    "intent": [
+      "signal",
+      "smoothing",
+      "geometry"
+    ],
+    "inputs": [
+      {
+        "name": "signal",
+        "label": "signal",
+        "help": "Typed signal input."
+      },
+      {
+        "name": "space",
+        "label": "space",
+        "help": "Typed space input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "signal_keys",
+        "type": "string_vec",
+        "help": "Optional key subset within the cell_vector_family."
+      },
+      {
+        "name": "dims",
+        "type": "list",
+        "help": "Optional dimensions of the selected space. NULL uses all dimensions."
+      },
+      {
+        "name": "k",
+        "type": "int",
+        "help": "Nearest-neighbor count per cell."
+      },
+      {
+        "name": "alpha",
+        "type": "dbl",
+        "help": "Blend weight for raw score in alpha * raw + (1 - alpha) * neighbor_mean."
+      },
+      {
+        "name": "distance_metric",
+        "type": "choice",
+        "help": "Distance metric used for nearest-neighbor search."
+      },
+      {
+        "name": "query_chunk_size",
+        "type": "int",
+        "help": "Number of query cells processed per nearest-neighbor chunk."
+      },
+      {
+        "name": "include_self",
+        "type": "bool",
+        "help": "Include each cell itself in its neighbor mean."
+      },
+      {
+        "name": "na_policy",
+        "type": "choice",
+        "help": "How missing signal values are handled during neighbor averaging."
+      },
+      {
+        "name": "source_signal_artifact_id",
+        "type": "string",
+        "help": "Optional source cell_vector_family artifact ID copied into metadata."
+      },
+      {
+        "name": "source_run_id",
+        "type": "string",
+        "help": "Optional source run ID copied into metadata."
+      },
+      {
+        "name": "source_snapshot_id",
+        "type": "string",
+        "help": "Optional source provenance snapshot ID copied into metadata."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "smoothed_signal",
+        "description": "Geometry-smoothed per-cell values for each selected key."
+      },
+      {
+        "name": "smoothing_summary",
+        "description": "Per-key smoothing diagnostics and parameter echo."
+      }
+    ]
+  },
+  "cell_vector_winners": {
+    "intent": [
+      "signal",
+      "labeling",
+      "winner"
+    ],
+    "inputs": [
+      {
+        "name": "signal",
+        "label": "signal",
+        "help": "Typed signal input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "signal_keys",
+        "type": "string_vec",
+        "help": "Optional key subset within the cell_vector_family."
+      },
+      {
+        "name": "min_winners",
+        "type": "int",
+        "help": "Minimum raw winner count required for a winner label to pass pruning."
+      },
+      {
+        "name": "tie_method",
+        "type": "choice",
+        "help": "Deterministic tie handling for top-score winners."
+      },
+      {
+        "name": "source_score_artifact_id",
+        "type": "string",
+        "help": "Optional source cell_vector_family artifact ID copied into winner table metadata."
+      },
+      {
+        "name": "source_run_id",
+        "type": "string",
+        "help": "Optional source run ID copied into winner table metadata."
+      },
+      {
+        "name": "source_snapshot_id",
+        "type": "string",
+        "help": "Optional source provenance snapshot ID copied into winner table metadata."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "winners",
+        "description": "Per-cell winner, runner-up, confidence, and pruning table."
+      }
+    ]
+  },
+  "winner_cell_sets": {
+    "intent": [
+      "signal",
+      "labeling",
+      "cell_sets"
+    ],
+    "inputs": [
+      {
+        "name": "winners",
+        "label": "winners",
+        "help": "Typed winners input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "source_winner_artifact_id",
+        "type": "string",
+        "help": "Optional source winner obs_table artifact ID copied into manifest metadata."
+      },
+      {
+        "name": "cell_set_prefix",
+        "type": "string",
+        "help": "Prefix used after set: when creating winner cell-set names."
+      },
+      {
+        "name": "winner_col",
+        "type": "string",
+        "help": "Winner-label column in the winner table."
+      },
+      {
+        "name": "passes_col",
+        "type": "string",
+        "help": "Logical pruning-pass column in the winner table."
+      },
+      {
+        "name": "source",
+        "type": "string",
+        "help": "Source label stored on cell-set membership rows."
+      },
+      {
+        "name": "created_by",
+        "type": "string",
+        "help": "Optional actor stored on cell-set membership rows."
+      },
+      {
+        "name": "replace",
+        "type": "bool",
+        "help": "If TRUE, replace existing winner cell-set memberships."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "manifest",
+        "description": "One row per registered winner cell set."
+      },
+      {
+        "name": "cell_set_family",
+        "description": "Atomic core-owned admission request for the complete winner-derived cell-set family."
+      }
+    ]
+  },
+  "feature_set_overlap_qc": {
+    "intent": [
+      "feature_set",
+      "qc",
+      "gene_set",
+      "screening",
+      "trajectory"
+    ],
+    "inputs": [
+      {
+        "name": "matrix",
+        "label": "matrix",
+        "help": "Typed matrix input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "namespace",
+        "type": "string",
+        "help": "Single feature-set namespace to QC."
+      },
+      {
+        "name": "namespaces",
+        "type": "string_vec",
+        "help": "Optional multiple feature-set namespaces to QC."
+      },
+      {
+        "name": "feature_sets",
+        "type": "string_vec",
+        "help": "Optional feature-set subset within selected namespaces."
+      },
+      {
+        "name": "min_set_size",
+        "type": "int",
+        "help": "Minimum mapped/detected genes required to include a set."
+      },
+      {
+        "name": "max_set_size",
+        "type": "dbl",
+        "help": "Maximum mapped/detected genes allowed to include a set."
+      },
+      {
+        "name": "min_detected_fraction",
+        "type": "dbl",
+        "help": "Minimum fraction of source genes detected in the matrix."
+      },
+      {
+        "name": "deduplicate_sets",
+        "type": "bool",
+        "help": "If TRUE, duplicate mapped-gene signatures after the first are excluded."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "overlap_qc",
+        "description": "One row per feature set with raw, mapped, detected counts and include/exclude status."
+      },
+      {
+        "name": "namespace_summary",
+        "description": "Namespace-level count and overlap summaries."
+      }
+    ]
+  },
+  "pathway_enrich": {
+    "intent": [
+      "pathway",
+      "enrichment"
+    ],
+    "inputs": [
+      {
+        "name": "matrix",
+        "label": "matrix",
+        "help": "Typed matrix input."
+      },
+      {
+        "name": "feature_table",
+        "label": "Input feature table (e.g. DE/marker results)",
+        "help": "Typed feature_table input."
+      }
+    ],
+    "parameters": [
+      {
+        "name": "namespace",
+        "type": "string",
+        "help": "Feature-set namespace from wb_feature_sets() (e.g. bcell_gsea)."
+      },
+      {
+        "name": "feature_col",
+        "type": "string",
+        "help": "Column in input feature table containing feature IDs (usually feature_id)."
+      },
+      {
+        "name": "p_adj_col",
+        "type": "string",
+        "help": "Adjusted p-value column used for query filtering."
+      },
+      {
+        "name": "p_adj_max",
+        "type": "dbl",
+        "help": "Maximum adjusted p-value for query features."
+      },
+      {
+        "name": "lfc_col",
+        "type": "string",
+        "help": "Effect-size column used for directional filtering."
+      },
+      {
+        "name": "direction",
+        "type": "string",
+        "help": "Directional filter: any|up|down."
+      },
+      {
+        "name": "lfc_min_abs",
+        "type": "dbl",
+        "help": "Minimum |effect| when direction='any'."
+      },
+      {
+        "name": "lfc_min",
+        "type": "dbl",
+        "help": "Minimum effect for direction='up'/'down'."
+      },
+      {
+        "name": "min_set_size",
+        "type": "int",
+        "help": "Minimum pathway size to test."
+      },
+      {
+        "name": "max_set_size",
+        "type": "int",
+        "help": "Maximum pathway size to test."
+      },
+      {
+        "name": "p_adjust_method",
+        "type": "string",
+        "help": "Method passed to p.adjust."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pathways",
+        "description": "Pathway enrichment statistics for one namespace."
+      }
+    ]
+  }
+}

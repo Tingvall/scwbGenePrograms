@@ -1,0 +1,14 @@
+Package: scwbGenePrograms
+Type: Package
+Title: Gene Program Operations for scworkbench
+Version: 0.1.0
+Authors@R: person("Hendrik A.", "de Weerd", role = c("aut", "cre"), email = "dirkdeweerd.work@gmail.com")
+Description: Explicitly activated ABI v3 operation pack providing gene-program
+    scoring, calibration, quality-control, winner, registry-admission, and
+    pathway-enrichment operations for scworkbench.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports: scworkbench, jsonlite, Matrix, stats, utils
+Suggests: BiocParallel, devtools, RANN, UCell
+RoxygenNote: 7.3.3

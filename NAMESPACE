@@ -1,0 +1,2 @@
+export(register_operation_pack)
+importFrom(stats,cor,mad,median,p.adjust,phyper,quantile,sd,setNames)

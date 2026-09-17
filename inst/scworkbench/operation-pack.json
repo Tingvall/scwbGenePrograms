@@ -1,0 +1,2153 @@
+{
+  "schema_version": "scworkbench.operation_pack.v3",
+  "pack_abi_version": "3",
+  "identity_scheme": "scworkbench.operation_pack.canonical_json.v1",
+  "namespace": "scwbgeneprograms",
+  "package": {
+    "name": "scwbGenePrograms",
+    "version": "0.1.0"
+  },
+  "backend": "R",
+  "compatibility": {
+    "scworkbench": {
+      "minimum": "0.1.0",
+      "maximum_exclusive": "0.2.0"
+    },
+    "pack_abi": {
+      "minimum": "3",
+      "maximum": "3"
+    }
+  },
+  "entry_point": "scwbGenePrograms::register_operation_pack",
+  "operations": [
+    {
+      "name": "addmodulescore",
+      "qualified_name": "scwbgeneprograms::addmodulescore",
+      "title": "Add module score",
+      "description": "Seurat-style module scoring using matched control features by expression bin.",
+      "runner": ".run_addmodulescore",
+      "inputs": [
+        {
+          "name": "matrix",
+          "kind": "matrix",
+          "required": true,
+          "alignment": "cell_and_feature_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "pool": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "nbin": {
+            "type": "integer",
+            "default": 24,
+            "minimum": 2,
+            "maximum": 200
+          },
+          "ctrl": {
+            "type": "integer",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "name": {
+            "type": "string",
+            "default": "Module",
+            "minLength": 1
+          },
+          "seed": {
+            "type": "integer",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "features"
+        ]
+      },
+      "dimension_policies": [
+        {
+          "output": "module_scores",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "cell_key_cartesian",
+          "cell_axis": {
+            "source": "effective_cells_v1",
+            "input": "matrix"
+          },
+          "key_axis": {
+            "source": "resolved_parameter_feature_groups_v1",
+            "groups_parameter": "features",
+            "matrix_input": "matrix",
+            "name_prefix_parameter": "name",
+            "matching": "exact_feature_id_v1",
+            "normalization": "ordered_unique_features_v1",
+            "generated_names": "legacy_module_group_names_v1",
+            "missing_feature_policy": {
+              "source": "fixed_drop_v1"
+            },
+            "empty_group_policy": "drop",
+            "zero_key_policy": "error"
+          },
+          "row_order": "key_major_then_cell_v1",
+          "missing_values": "forbidden"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "module_scores",
+          "category": "terminal_artifact",
+          "kind": "cell_vector_family",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "module_scores_id",
+          "required": true,
+          "promotion_group": "module_scores",
+          "value_kind": "continuous"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        },
+        {
+          "requirement_id": "matrix_runtime",
+          "kind": "r_package",
+          "name": "Matrix",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=1.3.0"
+          },
+          "disposition": "required",
+          "import_probe": "colMeans"
+        }
+      ],
+      "promotion_closure": {
+        "module_scores": [
+          "module_scores"
+        ]
+      },
+      "replay_equivalence": {
+        "module_scores": "exact_canonical_value"
+      },
+      "public_interface": {
+        "intent": [
+          "expression",
+          "signature",
+          "score"
+        ],
+        "inputs": [
+          {
+            "name": "matrix",
+            "label": "matrix",
+            "help": "Typed matrix input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "features",
+            "type": "list",
+            "help": "Module feature IDs: character vector or list of vectors."
+          },
+          {
+            "name": "pool",
+            "type": "string_vec",
+            "help": "Optional control feature pool; defaults to all matrix features."
+          },
+          {
+            "name": "nbin",
+            "type": "int",
+            "help": "Number of expression bins for control matching."
+          },
+          {
+            "name": "ctrl",
+            "type": "int",
+            "help": "Control features sampled per module feature."
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "help": "Prefix for module names when features are unnamed."
+          },
+          {
+            "name": "seed",
+            "type": "int",
+            "help": "Random seed for control sampling."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "module_scores",
+            "description": "Per-cell module scores for one or more signatures."
+          }
+        ]
+      }
+    },
+    {
+      "name": "ucell",
+      "qualified_name": "scwbgeneprograms::ucell",
+      "title": "UCell Signature Scoring",
+      "description": "Rank-based per-cell signature scoring using pack-owned chunking over canonical typed slices.",
+      "runner": ".run_ucell",
+      "inputs": [
+        {
+          "name": "matrix",
+          "kind": "matrix",
+          "required": true,
+          "alignment": "cell_and_feature_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "name": {
+            "type": "string",
+            "default": "Signature",
+            "minLength": 1
+          },
+          "max_rank": {
+            "type": "integer",
+            "default": 1500,
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "ncores": {
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 1024
+          },
+          "parallel_backend": {
+            "type": "string",
+            "default": "auto",
+            "enum": ["auto", "serial"],
+            "minLength": 1
+          },
+          "chunk_size": {
+            "type": "integer",
+            "default": 2000,
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "missing_features_policy": {
+            "type": "string",
+            "default": "drop",
+            "enum": ["drop", "error"],
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "features"
+        ]
+      },
+      "dimension_policies": [
+        {
+          "output": "signature_scores",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "cell_key_cartesian",
+          "cell_axis": {
+            "source": "effective_cells_v1",
+            "input": "matrix"
+          },
+          "key_axis": {
+            "source": "resolved_parameter_feature_groups_v1",
+            "groups_parameter": "features",
+            "matrix_input": "matrix",
+            "name_prefix_parameter": "name",
+            "matching": "exact_feature_id_v1",
+            "normalization": "ordered_unique_features_v1",
+            "generated_names": "legacy_module_group_names_v1",
+            "missing_feature_policy": {
+              "source": "parameter_v1",
+              "parameter": "missing_features_policy"
+            },
+            "empty_group_policy": "drop",
+            "zero_key_policy": "error"
+          },
+          "row_order": "key_major_then_cell_v1",
+          "missing_values": "forbidden"
+        },
+        {
+          "output": "signature_summary",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "signature_scores",
+          "category": "terminal_artifact",
+          "kind": "cell_vector_family",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "signature_scores_id",
+          "required": true,
+          "promotion_group": "ucell",
+          "value_kind": "continuous"
+        },
+        {
+          "name": "signature_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "signature_summary_id",
+          "required": true,
+          "promotion_group": "ucell",
+          "table_type": "ucell_signature_summary"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        },
+        {
+          "requirement_id": "matrix_runtime",
+          "kind": "r_package",
+          "name": "Matrix",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=1.3.0"
+          },
+          "disposition": "required",
+          "import_probe": "colMeans"
+        },
+        {
+          "requirement_id": "ucell_runtime",
+          "kind": "r_package",
+          "name": "UCell",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=2.0.0"
+          },
+          "disposition": "required",
+          "import_probe": "ScoreSignatures_UCell"
+        },
+        {
+          "requirement_id": "biocparallel_runtime",
+          "kind": "r_package",
+          "name": "BiocParallel",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=1.28.0"
+          },
+          "disposition": "required",
+          "import_probe": "SerialParam"
+        }
+      ],
+      "promotion_closure": {
+        "signature_scores": [
+          "signature_scores",
+          "signature_summary"
+        ],
+        "signature_summary": [
+          "signature_scores",
+          "signature_summary"
+        ]
+      },
+      "replay_equivalence": {
+        "signature_scores": "exact_canonical_value",
+        "signature_summary": "exact_canonical_value"
+      },
+      "typed_slice_reads": [
+        {
+          "name": "matrix_chunks",
+          "input": "matrix",
+          "reader": "read_typed_slices",
+          "kind": "matrix",
+          "supported_axes": [
+            "cells"
+          ],
+          "chunk_axis": "cells",
+          "chunk_size_parameter": "chunk_size",
+          "call_discipline": "ordered_partition_exactly_once",
+          "empty_selection_policy": "reject",
+          "duplicate_policy": "reject",
+          "selection": {
+            "cells": {
+              "policy": "effective_input_axis_v1"
+            },
+            "features": {
+              "policy": "effective_input_axis_v1"
+            }
+          }
+        }
+      ],
+      "public_interface": {
+        "intent": [
+          "expression",
+          "signature",
+          "score"
+        ],
+        "inputs": [
+          {
+            "name": "matrix",
+            "label": "matrix",
+            "help": "Typed matrix input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "features",
+            "type": "list",
+            "help": "Signature feature IDs: character vector or list of vectors."
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "help": "Prefix for signature names when features are unnamed."
+          },
+          {
+            "name": "max_rank",
+            "type": "int",
+            "help": "Maximum rank considered by UCell."
+          },
+          {
+            "name": "ncores",
+            "type": "int",
+            "help": "Number of worker processes requested by UCell."
+          },
+          {
+            "name": "parallel_backend",
+            "type": "choice",
+            "help": "Execution backend for UCell. Use 'serial' to avoid socket-based parallel backends on constrained systems."
+          },
+          {
+            "name": "chunk_size",
+            "type": "int",
+            "help": "Cell-axis chunk size for engine-owned UCell execution. Use NULL to disable chunking."
+          },
+          {
+            "name": "missing_features_policy",
+            "type": "choice",
+            "help": "How to handle signature features missing from the matrix."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "signature_scores",
+            "description": "Per-cell UCell scores for one or more signatures."
+          },
+          {
+            "name": "signature_summary",
+            "description": "Per-signature scoring summary and feature-match diagnostics."
+          }
+        ]
+      }
+    },
+    {
+      "name": "cell_vector_family_reduce",
+      "qualified_name": "scwbgeneprograms::cell_vector_family_reduce",
+      "title": "Reduce Cell Vector Family",
+      "description": "Reduce a keyed signal family to labels and deterministic diagnostics.",
+      "runner": ".run_family_reduce",
+      "inputs": [
+        {
+          "name": "signal",
+          "kind": "cell_vector_family",
+          "required": true,
+          "alignment": "cell_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "signal_keys": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "rule": {
+            "type": "string",
+            "default": "argmax",
+            "enum": "argmax",
+            "minLength": 1
+          },
+          "min_score": {
+            "type": ["number", "null"]
+          },
+          "min_margin": {
+            "type": ["number", "null"]
+          },
+          "unknown_label": {
+            "type": "string",
+            "default": "unknown",
+            "minLength": 1
+          },
+          "ties": {
+            "type": "string",
+            "default": "unknown",
+            "enum": ["unknown", "first"],
+            "minLength": 1
+          },
+          "tie_tol": {
+            "type": "number",
+            "default": 1e-08,
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "dimension_policies": [
+        {
+          "output": "label",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "one_per_cell",
+          "cell_axis": {
+            "source": "distinct_input_cells_first_occurrence_v1",
+            "input": "signal"
+          },
+          "row_order": "input_cell_order_v1",
+          "missing_values": "canonical_null_allowed"
+        },
+        {
+          "output": "top_score",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "one_per_cell",
+          "cell_axis": {
+            "source": "distinct_input_cells_first_occurrence_v1",
+            "input": "signal"
+          },
+          "row_order": "input_cell_order_v1",
+          "missing_values": "canonical_null_allowed"
+        },
+        {
+          "output": "runner_up_score",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "one_per_cell",
+          "cell_axis": {
+            "source": "distinct_input_cells_first_occurrence_v1",
+            "input": "signal"
+          },
+          "row_order": "input_cell_order_v1",
+          "missing_values": "canonical_null_allowed"
+        },
+        {
+          "output": "score_margin",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "one_per_cell",
+          "cell_axis": {
+            "source": "distinct_input_cells_first_occurrence_v1",
+            "input": "signal"
+          },
+          "row_order": "input_cell_order_v1",
+          "missing_values": "canonical_null_allowed"
+        },
+        {
+          "output": "abstain_reason",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "one_per_cell",
+          "cell_axis": {
+            "source": "distinct_input_cells_first_occurrence_v1",
+            "input": "signal"
+          },
+          "row_order": "input_cell_order_v1",
+          "missing_values": "canonical_null_allowed"
+        },
+        {
+          "output": "decision_table",
+          "policy": "data_dependent_table_v1"
+        },
+        {
+          "output": "label_summary",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "label",
+          "category": "terminal_artifact",
+          "kind": "cell_vector",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "label_id",
+          "required": true,
+          "promotion_group": "label",
+          "value_kind": "categorical"
+        },
+        {
+          "name": "top_score",
+          "category": "terminal_artifact",
+          "kind": "cell_vector",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "top_score_id",
+          "required": true,
+          "promotion_group": "top_score",
+          "value_kind": "continuous"
+        },
+        {
+          "name": "runner_up_score",
+          "category": "terminal_artifact",
+          "kind": "cell_vector",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "runner_up_score_id",
+          "required": true,
+          "promotion_group": "runner_up_score",
+          "value_kind": "continuous"
+        },
+        {
+          "name": "score_margin",
+          "category": "terminal_artifact",
+          "kind": "cell_vector",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "score_margin_id",
+          "required": true,
+          "promotion_group": "score_margin",
+          "value_kind": "continuous"
+        },
+        {
+          "name": "abstain_reason",
+          "category": "terminal_artifact",
+          "kind": "cell_vector",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "abstain_reason_id",
+          "required": true,
+          "promotion_group": "abstain_reason",
+          "value_kind": "categorical"
+        },
+        {
+          "name": "decision_table",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "decision_table_id",
+          "required": true,
+          "promotion_group": "decision_table",
+          "table_type": "cell_vector_family_reduce_decision_table"
+        },
+        {
+          "name": "label_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "label_summary_id",
+          "required": true,
+          "promotion_group": "label_summary",
+          "table_type": "cell_vector_family_reduce_summary"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        }
+      ],
+      "promotion_closure": {
+        "label": [
+          "label"
+        ],
+        "top_score": [
+          "top_score"
+        ],
+        "runner_up_score": [
+          "runner_up_score"
+        ],
+        "score_margin": [
+          "score_margin"
+        ],
+        "abstain_reason": [
+          "abstain_reason"
+        ],
+        "decision_table": [
+          "decision_table"
+        ],
+        "label_summary": [
+          "label_summary"
+        ]
+      },
+      "replay_equivalence": {
+        "label": "exact_canonical_value",
+        "top_score": "exact_canonical_value",
+        "runner_up_score": "exact_canonical_value",
+        "score_margin": "exact_canonical_value",
+        "abstain_reason": "exact_canonical_value",
+        "decision_table": "exact_canonical_value",
+        "label_summary": "exact_canonical_value"
+      },
+      "public_interface": {
+        "intent": [
+          "label",
+          "reduce",
+          "signal"
+        ],
+        "inputs": [
+          {
+            "name": "signal",
+            "label": "signal",
+            "help": "Typed signal input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "signal_keys",
+            "type": "string_vec",
+            "help": "Optional signal-key subset within the cell_vector_family."
+          },
+          {
+            "name": "rule",
+            "type": "choice",
+            "help": "Reduction rule used to choose one label per cell."
+          },
+          {
+            "name": "min_score",
+            "type": "dbl",
+            "help": "Optional minimum winning score required to emit a non-unknown label."
+          },
+          {
+            "name": "min_margin",
+            "type": "dbl",
+            "help": "Optional minimum top-vs-second margin required to emit a non-unknown label."
+          },
+          {
+            "name": "unknown_label",
+            "type": "string",
+            "help": "Fallback label emitted when thresholds or ties abstain."
+          },
+          {
+            "name": "ties",
+            "type": "choice",
+            "help": "How to handle tied top scores."
+          },
+          {
+            "name": "tie_tol",
+            "type": "dbl",
+            "help": "Tolerance used when detecting ties."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "label",
+            "description": "Per-cell categorical labels after reducing the signal family."
+          },
+          {
+            "name": "top_score",
+            "description": "Winning score for each cell."
+          },
+          {
+            "name": "runner_up_score",
+            "description": "Second-best score for each cell."
+          },
+          {
+            "name": "score_margin",
+            "description": "Winning minus runner-up score for each cell."
+          },
+          {
+            "name": "abstain_reason",
+            "description": "Per-cell abstention reason (`none`, `tie`, `min_score`, `min_margin`)."
+          },
+          {
+            "name": "decision_table",
+            "description": "Per-cell reduction diagnostics including label, scores, margin, and abstention reason."
+          },
+          {
+            "name": "label_summary",
+            "description": "Per-label counts and score summaries after reduction."
+          }
+        ]
+      }
+    },
+    {
+      "name": "cell_vector_family_calibrate",
+      "qualified_name": "scwbgeneprograms::cell_vector_family_calibrate",
+      "title": "Calibrate Cell Vector Family",
+      "description": "Calibrate each selected signal key independently.",
+      "runner": ".run_family_calibrate",
+      "inputs": [
+        {
+          "name": "signal",
+          "kind": "cell_vector_family",
+          "required": true,
+          "alignment": "cell_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "signal_keys": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "method": {
+            "type": "string",
+            "default": "percentile",
+            "enum": ["percentile", "zscore", "robust_zscore"],
+            "minLength": 1
+          },
+          "center": {
+            "type": "boolean",
+            "default": true
+          },
+          "scale": {
+            "type": "boolean",
+            "default": true
+          },
+          "ties_method": {
+            "type": "string",
+            "default": "average",
+            "enum": ["average", "first", "random", "max", "min"],
+            "minLength": 1
+          },
+          "na_rm": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "dimension_policies": [
+        {
+          "output": "calibrated_signal",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "cell_key_cartesian",
+          "cell_axis": {
+            "source": "effective_cells_v1",
+            "input": "signal"
+          },
+          "key_axis": {
+            "source": "input_keys_with_optional_selector_v1",
+            "input": "signal",
+            "selector_parameter": "signal_keys",
+            "no_selector_order": "first_occurrence_v1",
+            "selector_order": "normalized_parameter_order_v1",
+            "unknown_key_policy": "error",
+            "zero_key_policy": "error"
+          },
+          "row_order": "key_major_then_cell_v1",
+          "missing_values": "canonical_null_allowed"
+        },
+        {
+          "output": "calibration_summary",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "calibrated_signal",
+          "category": "terminal_artifact",
+          "kind": "cell_vector_family",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "calibrated_signal_id",
+          "required": true,
+          "promotion_group": "calibration",
+          "value_kind": "continuous"
+        },
+        {
+          "name": "calibration_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "calibration_summary_id",
+          "required": true,
+          "promotion_group": "calibration",
+          "table_type": "cell_vector_family_calibration_summary"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        }
+      ],
+      "promotion_closure": {
+        "calibrated_signal": [
+          "calibrated_signal",
+          "calibration_summary"
+        ],
+        "calibration_summary": [
+          "calibrated_signal",
+          "calibration_summary"
+        ]
+      },
+      "replay_equivalence": {
+        "calibrated_signal": "exact_canonical_value",
+        "calibration_summary": "exact_canonical_value"
+      },
+      "public_interface": {
+        "intent": [
+          "signal",
+          "calibrate",
+          "normalize"
+        ],
+        "inputs": [
+          {
+            "name": "signal",
+            "label": "signal",
+            "help": "Typed signal input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "signal_keys",
+            "type": "string_vec",
+            "help": "Optional signal-key subset within the cell_vector_family."
+          },
+          {
+            "name": "method",
+            "type": "choice",
+            "help": "Calibration method applied independently within each key."
+          },
+          {
+            "name": "center",
+            "type": "bool",
+            "help": "For z-score calibration, subtract the fitted center."
+          },
+          {
+            "name": "scale",
+            "type": "bool",
+            "help": "For z-score calibration, divide by the fitted scale."
+          },
+          {
+            "name": "ties_method",
+            "type": "choice",
+            "help": "Rank tie handling for percentile calibration."
+          },
+          {
+            "name": "na_rm",
+            "type": "bool",
+            "help": "Ignore non-finite values when fitting calibration."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "calibrated_signal",
+            "description": "Calibrated per-cell values for each key in the signal family."
+          },
+          {
+            "name": "calibration_summary",
+            "description": "Per-key calibration statistics for raw and calibrated values."
+          }
+        ]
+      }
+    },
+    {
+      "name": "cell_vector_family_qc",
+      "qualified_name": "scwbgeneprograms::cell_vector_family_qc",
+      "title": "QC Cell Vector Family",
+      "description": "Compute per-key, pairwise, and optional grouped diagnostics.",
+      "runner": ".run_family_qc",
+      "inputs": [
+        {
+          "name": "signal",
+          "kind": "cell_vector_family",
+          "required": true,
+          "alignment": "cell_ordered"
+        },
+        {
+          "name": "grouping",
+          "kind": "cell_vector",
+          "required": false,
+          "alignment": "cell_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "signal_keys": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "correlation_methods": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "default": ["pearson", "spearman"]
+          },
+          "tie_tol": {
+            "type": "number",
+            "default": 1e-08,
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "dimension_policies": [
+        {
+          "output": "key_summary",
+          "policy": "data_dependent_table_v1"
+        },
+        {
+          "output": "pairwise_summary",
+          "policy": "data_dependent_table_v1"
+        },
+        {
+          "output": "group_summary",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "key_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "key_summary_id",
+          "required": true,
+          "promotion_group": "key_summary",
+          "table_type": "cell_vector_family_qc_key_summary"
+        },
+        {
+          "name": "pairwise_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "pairwise_summary_id",
+          "required": true,
+          "promotion_group": "pairwise_summary",
+          "table_type": "cell_vector_family_qc_pairwise_summary"
+        },
+        {
+          "name": "group_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "group_summary_id",
+          "required": true,
+          "promotion_group": "group_summary",
+          "table_type": "cell_vector_family_qc_group_summary"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        }
+      ],
+      "promotion_closure": {
+        "key_summary": [
+          "key_summary"
+        ],
+        "pairwise_summary": [
+          "pairwise_summary"
+        ],
+        "group_summary": [
+          "group_summary"
+        ]
+      },
+      "replay_equivalence": {
+        "key_summary": "exact_canonical_value",
+        "pairwise_summary": "exact_canonical_value",
+        "group_summary": "exact_canonical_value"
+      },
+      "public_interface": {
+        "intent": [
+          "signal",
+          "qc",
+          "diagnostics"
+        ],
+        "inputs": [
+          {
+            "name": "signal",
+            "label": "signal",
+            "help": "Typed signal input."
+          },
+          {
+            "name": "grouping",
+            "label": "grouping",
+            "help": "Typed grouping input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "signal_keys",
+            "type": "string_vec",
+            "help": "Optional signal-key subset within the cell_vector_family."
+          },
+          {
+            "name": "correlation_methods",
+            "type": "string_vec",
+            "help": "Pairwise correlation methods to compute between keys."
+          },
+          {
+            "name": "tie_tol",
+            "type": "dbl",
+            "help": "Tolerance used when counting tied top-key winners."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "key_summary",
+            "description": "Per-key QC summaries including score distribution, finite coverage, and winner frequencies."
+          },
+          {
+            "name": "pairwise_summary",
+            "description": "Pairwise key relationships including overlap counts and correlations."
+          },
+          {
+            "name": "group_summary",
+            "description": "Per-group per-key QC summaries when an optional grouping vector is supplied."
+          }
+        ]
+      }
+    },
+    {
+      "name": "cell_vector_family_graph_smooth",
+      "qualified_name": "scwbgeneprograms::cell_vector_family_graph_smooth",
+      "title": "Graph Smooth Cell Vector Family",
+      "description": "Smooth signal keys over nearest-neighbor geometry with authenticated source ancestry.",
+      "runner": ".run_family_graph_smooth",
+      "inputs": [
+        {
+          "name": "signal",
+          "kind": "cell_vector_family",
+          "required": true,
+          "alignment": "cell_ordered"
+        },
+        {
+          "name": "space",
+          "kind": "space",
+          "required": true,
+          "alignment": "cell_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "signal_keys": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "dims": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "k": {
+            "type": "integer",
+            "default": 30,
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "alpha": {
+            "type": "number",
+            "default": 0.5,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "distance_metric": {
+            "type": "string",
+            "default": "euclidean",
+            "enum": "euclidean",
+            "minLength": 1
+          },
+          "query_chunk_size": {
+            "type": "integer",
+            "default": 512,
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "include_self": {
+            "type": "boolean",
+            "default": false
+          },
+          "na_policy": {
+            "type": "string",
+            "default": "ignore",
+            "enum": ["ignore", "zero", "propagate"],
+            "minLength": 1
+          },
+          "source_signal_artifact_id": {
+            "type": ["string", "null"]
+          },
+          "source_run_id": {
+            "type": ["string", "null"]
+          },
+          "source_snapshot_id": {
+            "type": ["string", "null"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "dimension_policies": [
+        {
+          "output": "smoothed_signal",
+          "policy": "authenticated_output_axes_v1",
+          "shape": "cell_key_cartesian",
+          "cell_axis": {
+            "source": "effective_cells_v1",
+            "input": "signal"
+          },
+          "key_axis": {
+            "source": "input_keys_with_optional_selector_v1",
+            "input": "signal",
+            "selector_parameter": "signal_keys",
+            "no_selector_order": "first_occurrence_v1",
+            "selector_order": "normalized_parameter_order_v1",
+            "unknown_key_policy": "error",
+            "zero_key_policy": "error"
+          },
+          "row_order": "key_major_then_cell_v1",
+          "missing_values": "canonical_null_allowed"
+        },
+        {
+          "output": "smoothing_summary",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "smoothed_signal",
+          "category": "terminal_artifact",
+          "kind": "cell_vector_family",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "smoothed_signal_id",
+          "required": true,
+          "promotion_group": "smoothing",
+          "value_kind": "continuous"
+        },
+        {
+          "name": "smoothing_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "smoothing_summary_id",
+          "required": true,
+          "promotion_group": "smoothing",
+          "table_type": "cell_vector_family_graph_smooth_summary"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        },
+        {
+          "requirement_id": "rann_runtime",
+          "kind": "r_package",
+          "name": "RANN",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=2.6.0"
+          },
+          "disposition": "required",
+          "import_probe": "nn2"
+        }
+      ],
+      "promotion_closure": {
+        "smoothed_signal": [
+          "smoothed_signal",
+          "smoothing_summary"
+        ],
+        "smoothing_summary": [
+          "smoothed_signal",
+          "smoothing_summary"
+        ]
+      },
+      "replay_equivalence": {
+        "smoothed_signal": "exact_canonical_value",
+        "smoothing_summary": "exact_canonical_value"
+      },
+      "provenance_reads": [
+        {
+          "name": "source_ancestry",
+          "category": "authenticated_core_provenance_snapshot",
+          "kind": "artifact_ancestry",
+          "reader": "read_artifact_ancestry",
+          "input": "signal",
+          "activation": "when_resolved_from_artifact",
+          "lifecycle_policy": "require_current",
+          "parameter_assertions": {
+            "artifact_id": "source_signal_artifact_id",
+            "run_id": "source_run_id",
+            "snapshot_id": "source_snapshot_id"
+          }
+        }
+      ],
+      "public_interface": {
+        "intent": [
+          "signal",
+          "smoothing",
+          "geometry"
+        ],
+        "inputs": [
+          {
+            "name": "signal",
+            "label": "signal",
+            "help": "Typed signal input."
+          },
+          {
+            "name": "space",
+            "label": "space",
+            "help": "Typed space input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "signal_keys",
+            "type": "string_vec",
+            "help": "Optional key subset within the cell_vector_family."
+          },
+          {
+            "name": "dims",
+            "type": "list",
+            "help": "Optional dimensions of the selected space. NULL uses all dimensions."
+          },
+          {
+            "name": "k",
+            "type": "int",
+            "help": "Nearest-neighbor count per cell."
+          },
+          {
+            "name": "alpha",
+            "type": "dbl",
+            "help": "Blend weight for raw score in alpha * raw + (1 - alpha) * neighbor_mean."
+          },
+          {
+            "name": "distance_metric",
+            "type": "choice",
+            "help": "Distance metric used for nearest-neighbor search."
+          },
+          {
+            "name": "query_chunk_size",
+            "type": "int",
+            "help": "Number of query cells processed per nearest-neighbor chunk."
+          },
+          {
+            "name": "include_self",
+            "type": "bool",
+            "help": "Include each cell itself in its neighbor mean."
+          },
+          {
+            "name": "na_policy",
+            "type": "choice",
+            "help": "How missing signal values are handled during neighbor averaging."
+          },
+          {
+            "name": "source_signal_artifact_id",
+            "type": "string",
+            "help": "Optional source cell_vector_family artifact ID copied into metadata."
+          },
+          {
+            "name": "source_run_id",
+            "type": "string",
+            "help": "Optional source run ID copied into metadata."
+          },
+          {
+            "name": "source_snapshot_id",
+            "type": "string",
+            "help": "Optional source provenance snapshot ID copied into metadata."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "smoothed_signal",
+            "description": "Geometry-smoothed per-cell values for each selected key."
+          },
+          {
+            "name": "smoothing_summary",
+            "description": "Per-key smoothing diagnostics and parameter echo."
+          }
+        ]
+      }
+    },
+    {
+      "name": "cell_vector_winners",
+      "qualified_name": "scwbgeneprograms::cell_vector_winners",
+      "title": "Cell Vector Winner Assignment",
+      "description": "Assign deterministic winners and pruning diagnostics from a signal family.",
+      "runner": ".run_cell_vector_winners",
+      "inputs": [
+        {
+          "name": "signal",
+          "kind": "cell_vector_family",
+          "required": true,
+          "alignment": "cell_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "signal_keys": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "min_winners": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 0,
+            "maximum": 100000000
+          },
+          "tie_method": {
+            "type": "string",
+            "default": "first",
+            "enum": ["first", "last"],
+            "minLength": 1
+          },
+          "source_score_artifact_id": {
+            "type": ["string", "null"]
+          },
+          "source_run_id": {
+            "type": ["string", "null"]
+          },
+          "source_snapshot_id": {
+            "type": ["string", "null"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "dimension_policies": [
+        {
+          "output": "winners",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "winners",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "winners_id",
+          "required": true,
+          "promotion_group": "winners",
+          "table_type": "cell_vector_winners"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        }
+      ],
+      "promotion_closure": {
+        "winners": [
+          "winners"
+        ]
+      },
+      "replay_equivalence": {
+        "winners": "exact_canonical_value"
+      },
+      "public_interface": {
+        "intent": [
+          "signal",
+          "labeling",
+          "winner"
+        ],
+        "inputs": [
+          {
+            "name": "signal",
+            "label": "signal",
+            "help": "Typed signal input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "signal_keys",
+            "type": "string_vec",
+            "help": "Optional key subset within the cell_vector_family."
+          },
+          {
+            "name": "min_winners",
+            "type": "int",
+            "help": "Minimum raw winner count required for a winner label to pass pruning."
+          },
+          {
+            "name": "tie_method",
+            "type": "choice",
+            "help": "Deterministic tie handling for top-score winners."
+          },
+          {
+            "name": "source_score_artifact_id",
+            "type": "string",
+            "help": "Optional source cell_vector_family artifact ID copied into winner table metadata."
+          },
+          {
+            "name": "source_run_id",
+            "type": "string",
+            "help": "Optional source run ID copied into winner table metadata."
+          },
+          {
+            "name": "source_snapshot_id",
+            "type": "string",
+            "help": "Optional source provenance snapshot ID copied into winner table metadata."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "winners",
+            "description": "Per-cell winner, runner-up, confidence, and pruning table."
+          }
+        ]
+      }
+    },
+    {
+      "name": "winner_cell_sets",
+      "qualified_name": "scwbgeneprograms::winner_cell_sets",
+      "title": "Winner Cell-Set Registration",
+      "description": "Request atomic core-owned admission of the complete winner-derived cell-set family.",
+      "runner": ".run_winner_cell_sets",
+      "inputs": [
+        {
+          "name": "winners",
+          "kind": "obs_table",
+          "required": true,
+          "alignment": "none"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "source_winner_artifact_id": {
+            "type": ["string", "null"]
+          },
+          "cell_set_prefix": {
+            "type": "string",
+            "default": "winner_",
+            "minLength": 1
+          },
+          "winner_col": {
+            "type": "string",
+            "default": "winner",
+            "minLength": 1
+          },
+          "passes_col": {
+            "type": "string",
+            "default": "passes_pruning",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "default": "cell_vector_winners",
+            "minLength": 1
+          },
+          "created_by": {
+            "type": ["string", "null"]
+          },
+          "replace": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "dimension_policies": [
+        {
+          "output": "manifest",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "manifest",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "manifest_id",
+          "required": true,
+          "promotion_group": "winner_family",
+          "table_type": "winner_cell_set_manifest"
+        },
+        {
+          "name": "cell_set_family",
+          "category": "core_registry_request",
+          "kind": "cell_set_family_admission",
+          "storage_profile": "cell_set_family_admission_v1",
+          "allocated_id_key": "cell_set_family_id",
+          "required": true,
+          "promotion_group": "winner_family"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        }
+      ],
+      "promotion_closure": {
+        "manifest": [
+          "cell_set_family",
+          "manifest"
+        ]
+      },
+      "replay_equivalence": {
+        "manifest": "exact_canonical_value",
+        "cell_set_family": "exact_family_membership_and_order"
+      },
+      "public_interface": {
+        "intent": [
+          "signal",
+          "labeling",
+          "cell_sets"
+        ],
+        "inputs": [
+          {
+            "name": "winners",
+            "label": "winners",
+            "help": "Typed winners input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source_winner_artifact_id",
+            "type": "string",
+            "help": "Optional source winner obs_table artifact ID copied into manifest metadata."
+          },
+          {
+            "name": "cell_set_prefix",
+            "type": "string",
+            "help": "Prefix used after set: when creating winner cell-set names."
+          },
+          {
+            "name": "winner_col",
+            "type": "string",
+            "help": "Winner-label column in the winner table."
+          },
+          {
+            "name": "passes_col",
+            "type": "string",
+            "help": "Logical pruning-pass column in the winner table."
+          },
+          {
+            "name": "source",
+            "type": "string",
+            "help": "Source label stored on cell-set membership rows."
+          },
+          {
+            "name": "created_by",
+            "type": "string",
+            "help": "Optional actor stored on cell-set membership rows."
+          },
+          {
+            "name": "replace",
+            "type": "bool",
+            "help": "If TRUE, replace existing winner cell-set memberships."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "manifest",
+            "description": "One row per registered winner cell set."
+          },
+          {
+            "name": "cell_set_family",
+            "description": "Atomic core-owned admission request for the complete winner-derived cell-set family."
+          }
+        ]
+      }
+    },
+    {
+      "name": "feature_set_overlap_qc",
+      "qualified_name": "scwbgeneprograms::feature_set_overlap_qc",
+      "title": "Feature-Set Matrix Overlap QC",
+      "description": "Screen authenticated feature-set-registry entries against a matrix universe.",
+      "runner": ".run_feature_set_overlap_qc",
+      "inputs": [
+        {
+          "name": "matrix",
+          "kind": "matrix",
+          "required": true,
+          "alignment": "cell_and_feature_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": ["string", "null"]
+          },
+          "namespaces": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "feature_sets": {
+            "type": ["array", "null"],
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "min_set_size": {
+            "type": "integer",
+            "default": 1,
+            "minimum": 0
+          },
+          "max_set_size": {
+            "type": ["number", "null"],
+            "minimum": 1
+          },
+          "min_detected_fraction": {
+            "type": "number",
+            "default": 0,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "deduplicate_sets": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "dimension_policies": [
+        {
+          "output": "overlap_qc",
+          "policy": "data_dependent_table_v1"
+        },
+        {
+          "output": "namespace_summary",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "overlap_qc",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "overlap_qc_id",
+          "required": true,
+          "promotion_group": "overlap",
+          "table_type": "feature_set_overlap_qc"
+        },
+        {
+          "name": "namespace_summary",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "namespace_summary_id",
+          "required": true,
+          "promotion_group": "overlap",
+          "table_type": "feature_set_overlap_qc_summary"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        }
+      ],
+      "promotion_closure": {
+        "overlap_qc": [
+          "namespace_summary",
+          "overlap_qc"
+        ],
+        "namespace_summary": [
+          "namespace_summary",
+          "overlap_qc"
+        ]
+      },
+      "replay_equivalence": {
+        "overlap_qc": "exact_canonical_value",
+        "namespace_summary": "exact_canonical_value"
+      },
+      "registry_reads": [
+        {
+          "name": "feature_sets",
+          "category": "authenticated_core_registry_snapshot",
+          "kind": "feature_set_registry",
+          "reader": "read_feature_set_registry",
+          "matrix_input": "matrix",
+          "namespace_parameter": "namespace",
+          "namespaces_parameter": "namespaces",
+          "feature_sets_parameter": "feature_sets",
+          "no_selector_policy": "all_namespaces",
+          "empty_match_policy": "error"
+        }
+      ],
+      "public_interface": {
+        "intent": [
+          "feature_set",
+          "qc",
+          "gene_set",
+          "screening",
+          "trajectory"
+        ],
+        "inputs": [
+          {
+            "name": "matrix",
+            "label": "matrix",
+            "help": "Typed matrix input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "help": "Single feature-set namespace to QC."
+          },
+          {
+            "name": "namespaces",
+            "type": "string_vec",
+            "help": "Optional multiple feature-set namespaces to QC."
+          },
+          {
+            "name": "feature_sets",
+            "type": "string_vec",
+            "help": "Optional feature-set subset within selected namespaces."
+          },
+          {
+            "name": "min_set_size",
+            "type": "int",
+            "help": "Minimum mapped/detected genes required to include a set."
+          },
+          {
+            "name": "max_set_size",
+            "type": "dbl",
+            "help": "Maximum mapped/detected genes allowed to include a set."
+          },
+          {
+            "name": "min_detected_fraction",
+            "type": "dbl",
+            "help": "Minimum fraction of source genes detected in the matrix."
+          },
+          {
+            "name": "deduplicate_sets",
+            "type": "bool",
+            "help": "If TRUE, duplicate mapped-gene signatures after the first are excluded."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "overlap_qc",
+            "description": "One row per feature set with raw, mapped, detected counts and include/exclude status."
+          },
+          {
+            "name": "namespace_summary",
+            "description": "Namespace-level count and overlap summaries."
+          }
+        ]
+      }
+    },
+    {
+      "name": "pathway_enrich",
+      "qualified_name": "scwbgeneprograms::pathway_enrich",
+      "title": "Pathway Enrichment",
+      "description": "Hypergeometric enrichment against an authenticated feature-set namespace snapshot.",
+      "runner": ".run_pathway_enrich",
+      "inputs": [
+        {
+          "name": "matrix",
+          "kind": "matrix",
+          "required": true,
+          "alignment": "cell_and_feature_ordered"
+        },
+        {
+          "name": "feature_table",
+          "kind": "feature_table",
+          "required": true,
+          "alignment": "feature_ordered"
+        }
+      ],
+      "params_schema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "minLength": 1
+          },
+          "feature_col": {
+            "type": "string",
+            "default": "feature_id",
+            "minLength": 1
+          },
+          "p_adj_col": {
+            "type": "string",
+            "default": "p_val_adj",
+            "minLength": 1
+          },
+          "p_adj_max": {
+            "type": "number",
+            "default": 0.05,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "lfc_col": {
+            "type": "string",
+            "default": "avg_log1p_fc",
+            "minLength": 1
+          },
+          "direction": {
+            "type": "string",
+            "default": "any",
+            "minLength": 1
+          },
+          "lfc_min_abs": {
+            "type": "number",
+            "default": 0,
+            "minimum": 0
+          },
+          "lfc_min": {
+            "type": "number",
+            "default": 0.25,
+            "minimum": 0
+          },
+          "min_set_size": {
+            "type": "integer",
+            "default": 5,
+            "minimum": 1
+          },
+          "max_set_size": {
+            "type": "integer",
+            "default": 5000,
+            "minimum": 1
+          },
+          "p_adjust_method": {
+            "type": "string",
+            "default": "BH",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "namespace"
+        ]
+      },
+      "dimension_policies": [
+        {
+          "output": "pathways",
+          "policy": "data_dependent_table_v1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pathways",
+          "category": "terminal_artifact",
+          "kind": "obs_table",
+          "storage_profile": "terminal_primitive_v1",
+          "allocated_id_key": "pathways_id",
+          "required": true,
+          "promotion_group": "pathways",
+          "table_type": "pathway_enrich"
+        }
+      ],
+      "dependencies": [
+        {
+          "requirement_id": "scworkbench_runtime",
+          "kind": "r_package",
+          "name": "scworkbench",
+          "version": {
+            "scheme": "r_package_version_constraint_v1",
+            "specifier": ">=0.1.0,<0.2.0"
+          },
+          "disposition": "required",
+          "import_probe": "wb_prim_obs_table"
+        }
+      ],
+      "promotion_closure": {
+        "pathways": [
+          "pathways"
+        ]
+      },
+      "replay_equivalence": {
+        "pathways": "exact_canonical_value"
+      },
+      "registry_reads": [
+        {
+          "name": "feature_sets",
+          "category": "authenticated_core_registry_snapshot",
+          "kind": "feature_set_registry",
+          "reader": "read_feature_set_registry",
+          "matrix_input": "matrix",
+          "namespace_parameter": "namespace",
+          "no_selector_policy": "all_namespaces",
+          "empty_match_policy": "error"
+        }
+      ],
+      "public_interface": {
+        "intent": [
+          "pathway",
+          "enrichment"
+        ],
+        "inputs": [
+          {
+            "name": "matrix",
+            "label": "matrix",
+            "help": "Typed matrix input."
+          },
+          {
+            "name": "feature_table",
+            "label": "Input feature table (e.g. DE/marker results)",
+            "help": "Typed feature_table input."
+          }
+        ],
+        "parameters": [
+          {
+            "name": "namespace",
+            "type": "string",
+            "help": "Feature-set namespace from wb_feature_sets() (e.g. bcell_gsea)."
+          },
+          {
+            "name": "feature_col",
+            "type": "string",
+            "help": "Column in input feature table containing feature IDs (usually feature_id)."
+          },
+          {
+            "name": "p_adj_col",
+            "type": "string",
+            "help": "Adjusted p-value column used for query filtering."
+          },
+          {
+            "name": "p_adj_max",
+            "type": "dbl",
+            "help": "Maximum adjusted p-value for query features."
+          },
+          {
+            "name": "lfc_col",
+            "type": "string",
+            "help": "Effect-size column used for directional filtering."
+          },
+          {
+            "name": "direction",
+            "type": "string",
+            "help": "Directional filter: any|up|down."
+          },
+          {
+            "name": "lfc_min_abs",
+            "type": "dbl",
+            "help": "Minimum |effect| when direction='any'."
+          },
+          {
+            "name": "lfc_min",
+            "type": "dbl",
+            "help": "Minimum effect for direction='up'/'down'."
+          },
+          {
+            "name": "min_set_size",
+            "type": "int",
+            "help": "Minimum pathway size to test."
+          },
+          {
+            "name": "max_set_size",
+            "type": "int",
+            "help": "Maximum pathway size to test."
+          },
+          {
+            "name": "p_adjust_method",
+            "type": "string",
+            "help": "Method passed to p.adjust."
+          }
+        ],
+        "outputs": [
+          {
+            "name": "pathways",
+            "description": "Pathway enrichment statistics for one namespace."
+          }
+        ]
+      }
+    }
+  ]
+}
