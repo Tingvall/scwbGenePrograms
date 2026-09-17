@@ -124,6 +124,7 @@ test_geneprogram_winner_cell_sets_empty_family_contract <- function() {
     outputs = "manifest", created_by = "contract")
   stopifnot(all(promotion$promoted$status == "ok"),
     !any(startsWith(as.character(wb_cell_sets(f$bundle)), "set:winner_")))
+  run$session <- wb_session_discard(run$session)
   TRUE
 }
 
@@ -227,6 +228,7 @@ test_geneprogram_winner_family_atomicity_and_interruption_contract <- function()
   stopifnot(identical(wb_cells(f$bundle, "set:winner_A"), f$cells[1:4]),
     identical(wb_cells(f$bundle, "set:winner_B"), f$cells[5:8]),
     all(retry_promotion$promoted$status == "ok"))
+  retry$session <- wb_session_discard(retry$session)
 
   collision <- geneprogram_fixture()
   on.exit(wb_close_bundle(collision$bundle), add = TRUE)
@@ -241,6 +243,7 @@ test_geneprogram_winner_family_atomicity_and_interruption_contract <- function()
       c(collision$cells[1:4], collision$cells[[8L]])),
     identical(wb_cells(collision$bundle, "set:winner_B"), collision$cells[5:8]),
     all(added_promotion$promoted$status == "ok"))
+  added$session <- wb_session_discard(added$session)
 
   partial <- geneprogram_fixture()
   on.exit(wb_close_bundle(partial$bundle), add = TRUE)
