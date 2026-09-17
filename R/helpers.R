@@ -11,15 +11,6 @@
   }
 }
 
-.gp_partition_axis <- function(ids, size) {
-  ids <- as.character(ids)
-  size <- as.integer(size)[1L]
-  .gp_assert(length(size) == 1L && !is.na(size) && size > 0L,
-    "Chunk size must be a positive integer.")
-  if (!length(ids)) return(list())
-  split(ids, ceiling(seq_along(ids) / size))
-}
-
 .gp_kind <- function(x, kind) {
   .gp_assert(inherits(x, "wb_primitive") && identical(as.character(x$kind)[1], kind),
     paste0("Expected a ", kind, " primitive."))
