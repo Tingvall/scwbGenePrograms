@@ -206,6 +206,11 @@ test_geneprogram_winner_family_atomicity_and_interruption_contract <- function()
       cell_set_prefix = "winner_", winner_col = "winner",
       passes_col = "passes_pruning", source = "cell_vector_winners",
       created_by = NULL, replace = replace, min_cells = 1L))
+  execute_winner <- function(fixture, value, replace) geneprogram_execute(
+    fixture, "winner_cell_sets", list(winners = value), list(
+      source_winner_artifact_id = NULL, cell_set_prefix = "winner_",
+      winner_col = "winner", passes_col = "passes_pruning",
+      source = "cell_vector_winners", created_by = NULL, replace = replace))
   f <- geneprogram_fixture(); on.exit(wb_close_bundle(f$bundle), add = TRUE)
   winners <- wb_prim_obs_table(data.frame(cell_id = f$cells,
     winner = rep(c("A", "B"), each = 4L), passes_pruning = TRUE,
@@ -216,7 +221,7 @@ test_geneprogram_winner_family_atomicity_and_interruption_contract <- function()
   on.exit(options(scworkbench.operation_pack_v2_test_hook = old), add = TRUE)
   options(scworkbench.operation_pack_v2_test_hook = function(event, ...)
     if (identical(event, "before_publication")) stop("injected interruption"))
-  interrupted <- tryCatch(run_winner(f, winners, TRUE), error = identity)
+  interrupted <- tryCatch(execute_winner(f, winners, TRUE), error = identity)
   options(scworkbench.operation_pack_v2_test_hook = old)
   stopifnot(inherits(interrupted, "wb_operation_pack_error"),
     identical(before_a, wb_cells(f$bundle, "set:winner_A")),
@@ -251,7 +256,7 @@ test_geneprogram_winner_family_atomicity_and_interruption_contract <- function()
     cell_id = c(partial$cells[1:4], ".not_in_bundle."),
     winner = c(rep("A", 4L), "B"), passes_pruning = TRUE,
     stringsAsFactors = FALSE), "cell_vector_winners", "cell")
-  invalid <- tryCatch(run_winner(partial, invalid_winners, TRUE), error = identity)
+  invalid <- tryCatch(execute_winner(partial, invalid_winners, TRUE), error = identity)
   stopifnot(inherits(invalid, "error"),
     !any(c("set:winner_A", "set:winner_B") %in% as.character(wb_cell_sets(partial$bundle))))
   TRUE
