@@ -287,11 +287,28 @@
         "authenticated source-ancestry request and observation disagree")
   }
   if (method %in% c("feature_set_overlap_qc", "pathway_enrich")) {
+    requested <- request$registry_reads %||% list()
     reads <- receipt$registry_reads %||% list()
-    if (length(reads) != 1L ||
+    if (length(requested) != 1L || length(reads) != 1L ||
         !nzchar(as.character(reads[[1L]]$descriptor$content_identity$sha256 %||% "")))
       .gp_equivalence_abort("EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
         "authenticated feature-set registry observation is absent")
+    request_descriptor <- requested[[1L]]$descriptor
+    receipt_descriptor <- reads[[1L]]$descriptor
+    request_identity <- request_descriptor$descriptor_identity
+    receipt_identity <- receipt_descriptor$observed_descriptor_identity
+    request_descriptor$descriptor_identity <- NULL
+    receipt_descriptor$observed_descriptor_identity <- NULL
+    .gp_assert_self_identity(method, request_descriptor, request_identity,
+      "registry request descriptor")
+    .gp_assert_self_identity(method, receipt_descriptor, receipt_identity,
+      "registry receipt descriptor")
+    for (field in c("content_identity", "source_identity",
+        "ancestry_identity", "payload_manifest_identity")) {
+      if (!identical(request_descriptor[[field]], receipt_descriptor[[field]]))
+        .gp_equivalence_abort("EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+          paste0("registry request and receipt differ at ", field))
+    }
   }
   if (identical(method, "winner_cell_sets") &&
       length(receipt$registry_requests %||% list()) != 1L)
@@ -336,6 +353,9 @@ compare_geneprogram_equivalence <- function(old, new, output = NULL) {
           .gp_binding_rows(b$entity_bindings)))
       .gp_equivalence_abort("EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
         "scheme-qualified input identities or persisted entity bindings differ")
+    if (!.gp_equal(a$registry_binding, b$registry_binding))
+      .gp_equivalence_abort("EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+        "authenticated registry selection, content, or source identity differs")
     if (!isTRUE(a$promotion$atomic) || !isTRUE(b$promotion$atomic))
       .gp_equivalence_abort("EQUIVALENCE_PROMOTION_ATOMICITY_MISMATCH", method,
         "promotion did not publish the complete declared terminal set")

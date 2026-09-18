@@ -336,6 +336,45 @@ input_identity_rows <- function(bundle, resolved) {
   do.call(rbind, rows)
 }
 
+registry_binding <- function(bundle, name, resolved, params, transition) {
+  if (!name %in% c("feature_set_overlap_qc", "pathway_enrich")) return(NULL)
+  declaration <- list(name = "feature_sets", matrix_input = "matrix",
+    namespace_parameter = "namespace", no_selector_policy = "all_namespaces",
+    empty_match_policy = "error")
+  if (identical(name, "feature_set_overlap_qc")) {
+    declaration$namespaces_parameter <- "namespaces"
+    declaration$feature_sets_parameter <- "feature_sets"
+  }
+  snapshot <- getFromNamespace(
+    ".wb_operation_pack_v2_feature_set_registry_snapshot", "scworkbench")(
+      bundle, declaration, resolved, params)
+  scoped <- getFromNamespace(".wb_operation_pack_v2_identity_scoped",
+    "scworkbench")
+  identities <- list(
+    selection_identity = scoped(
+      "scworkbench.feature_set_registry.selection.v1",
+      "normalized selector binding", snapshot$selection),
+    content_identity = scoped(
+      "scworkbench.feature_set_registry.snapshot.v1",
+      "canonical matrix-bound registry snapshot", snapshot),
+    source_identity = scoped(
+      "scworkbench.feature_set_registry.source.v1",
+      "ordered registry source state", list(matrix_id = snapshot$matrix_id,
+        feature_universe = snapshot$feature_universe, sets = snapshot$sets)))
+  if (!is.null(transition)) {
+    request <- transition$request$registry_reads[[1L]]$descriptor
+    receipt <- transition$receipt$registry_reads[[1L]]$descriptor
+    if (!identical(request$selection_identity, identities$selection_identity) ||
+        !identical(request$content_identity, identities$content_identity) ||
+        !identical(request$source_identity, identities$source_identity) ||
+        !identical(receipt$content_identity, identities$content_identity) ||
+        !identical(receipt$source_identity, identities$source_identity)) {
+      stop("published registry identity differs from the authoritative snapshot")
+    }
+  }
+  identities
+}
+
 snapshot_one <- function(name) {
   cat("SNAPSHOT METHOD mode=", mode, " method=", name, "\n", sep = "")
   target <- tempfile(paste0("geneprograms-equivalence-", name, "-"))
@@ -394,6 +433,8 @@ snapshot_one <- function(name) {
       symbolic_inputs = details$run$symbolic_inputs,
       execution_inputs = details$run$execution_inputs),
     input_identities = input_identity_rows(b, resolved),
+    registry_binding = registry_binding(b, name, resolved,
+      specs[[name]]$params, transition_record),
     entity_bindings = canonical_binding_rows(details),
     outputs = output_rows,
     promotion = list(atomic = promotion_atomic,
