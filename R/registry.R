@@ -66,7 +66,6 @@
     "feature_set_overlap_qc_summary", "namespace", meta))
   invisible(list(status = "ok"))
 }
-
 .run_pathway_enrich <- function(readers, writers, params, context) {
   matrix <- readers$matrix(); input <- readers$feature_table()$table
   registry <- readers$feature_sets(); sets <- .gp_registry_sets(registry)
@@ -116,4 +115,3 @@
       namespace = params$namespace, query_size = length(query), universe_size = length(universe))))
   invisible(list(status = "ok"))
 }
-

@@ -61,7 +61,6 @@
     "cell_vector_winners", "cell", meta))
   invisible(list(status = "ok"))
 }
-
 .run_winner_cell_sets <- function(readers, writers, params, context) {
   winners <- readers$winners(); .gp_kind(winners, "obs_table")
   .gp_assert(identical(as.character(winners$table_type), "cell_vector_winners"),
@@ -112,4 +111,3 @@
       input_snapshot_id = if (is.null(winners$meta$source_snapshot_id) || is.na(winners$meta$source_snapshot_id)) NULL else as.character(winners$meta$source_snapshot_id)[1])))
   invisible(list(status = "ok"))
 }
-
