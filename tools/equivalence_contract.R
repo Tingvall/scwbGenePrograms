@@ -220,6 +220,153 @@
   TRUE
 }
 
+.gp_named_items <- function(method, items, label, code) {
+  if (!is.list(items)) .gp_equivalence_abort(code, method,
+    paste0(label, " is absent"))
+  names <- vapply(items, function(item) {
+    if (!is.list(item)) return("")
+    as.character(item$name %||% item$output_name %||% "")[[1L]]
+  }, character(1))
+  if (any(!nzchar(names)) || anyDuplicated(names)) .gp_equivalence_abort(
+    code, method, paste0(label, " contains a missing or duplicate name"))
+  stats::setNames(items, names)
+}
+
+.gp_identity_fields <- c("content_identity", "source_identity",
+  "ancestry_identity", "binding_identity", "payload_manifest_identity",
+  "cell_order_identity", "feature_order_identity",
+  "semantic_metadata_identity", "row_order_identity",
+  "linked_space_identity", "model_linkage_identity",
+  "contained_payload_identity", "descriptor_identity")
+
+.gp_assert_input_bindings <- function(method, request, record) {
+  inputs <- .gp_named_items(method, request$inputs %||% list(),
+    "request input descriptors", "EQUIVALENCE_INPUT_BINDING_MISMATCH")
+  ledger <- record$input_identities
+  if (!is.data.frame(ledger) ||
+      !all(c("input_name", "primitive_kind", "transition_descriptor") %in%
+        names(ledger)) ||
+      anyDuplicated(as.character(ledger$input_name)) ||
+      any(!nzchar(as.character(ledger$input_name)))) .gp_equivalence_abort(
+    "EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+    "authoritative input descriptor ledger is absent or ambiguous")
+  ledger_names <- as.character(ledger$input_name)
+  if (!identical(sort(names(inputs), method = "radix"),
+      sort(ledger_names, method = "radix"))) .gp_equivalence_abort(
+    "EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+    "request input descriptors do not bijectively cover the authoritative ledger")
+  for (name in ledger_names) {
+    descriptor <- inputs[[name]]$descriptor
+    if (!is.list(descriptor)) .gp_equivalence_abort(
+      "EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+      paste0("request input descriptor is absent for ", name))
+    identity <- descriptor$descriptor_identity
+    descriptor_without_identity <- descriptor
+    descriptor_without_identity$descriptor_identity <- NULL
+    .gp_assert_self_identity(method, descriptor_without_identity, identity,
+      paste0("input descriptor ", name))
+    expected <- ledger$transition_descriptor[[match(name, ledger_names)]]
+    expected_kind <- as.character(ledger$primitive_kind[[
+      match(name, ledger_names)]])
+    if (!is.list(expected)) .gp_equivalence_abort(
+      "EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+      paste0("authoritative input descriptor is absent for ", name))
+    if (!identical(as.character(descriptor$kind),
+        as.character(expected$kind)) ||
+        !identical(as.character(descriptor$kind), expected_kind))
+      .gp_equivalence_abort(
+      "EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+      paste0("input primitive kind differs for ", name))
+    fields <- intersect(.gp_identity_fields,
+      union(names(descriptor), names(expected)))
+    for (field in fields) if (!identical(descriptor[[field]],
+        expected[[field]])) .gp_equivalence_abort(
+      "EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
+      paste0("input ", field, " differs for ", name))
+  }
+  TRUE
+}
+
+.gp_assert_output_bindings <- function(method, receipt, record) {
+  outputs <- .gp_named_items(method, receipt$outputs %||% list(),
+    "receipt output descriptors", "EQUIVALENCE_OUTPUT_BINDING_MISMATCH")
+  published_rows <- record$outputs
+  if (!is.data.frame(published_rows) ||
+      !"output_name" %in% names(published_rows) ||
+      anyDuplicated(as.character(published_rows$output_name)) ||
+      any(!nzchar(as.character(published_rows$output_name))))
+    .gp_equivalence_abort("EQUIVALENCE_OUTPUT_BINDING_MISMATCH", method,
+      "published run output ledger is absent or ambiguous")
+  row_names <- as.character(published_rows$output_name)
+  payloads <- .gp_named_items(method, record$published_payloads %||% list(),
+    "authoritative published payload records",
+    "EQUIVALENCE_OUTPUT_PAYLOAD_BINDING_MISMATCH")
+  if (!identical(sort(names(outputs), method = "radix"),
+      sort(row_names, method = "radix"))) .gp_equivalence_abort(
+    "EQUIVALENCE_OUTPUT_BINDING_MISMATCH", method,
+    "receipt outputs do not bijectively cover published run outputs")
+  if (!identical(sort(names(payloads), method = "radix"),
+      sort(row_names, method = "radix"))) .gp_equivalence_abort(
+    "EQUIVALENCE_OUTPUT_PAYLOAD_BINDING_MISMATCH", method,
+    "authoritative payload records do not bijectively cover published outputs")
+  for (name in row_names) {
+    descriptor <- outputs[[name]]$descriptor
+    row <- published_rows[match(name, row_names), , drop = FALSE]
+    payload <- payloads[[name]]
+    if (!is.list(descriptor)) .gp_equivalence_abort(
+      "EQUIVALENCE_OUTPUT_BINDING_MISMATCH", method,
+      paste0("receipt output descriptor is absent for ", name))
+    content_required <- c(descriptor$content_identity$scheme,
+      descriptor$content_identity$sha256,
+      descriptor$observed_descriptor_identity$sha256)
+    if (length(content_required) != 3L || anyNA(content_required) ||
+        any(!nzchar(content_required))) .gp_equivalence_abort(
+      "EQUIVALENCE_OUTPUT_BINDING_MISMATCH", method,
+      paste0("receipt output identity is incomplete for ", name))
+    payload_required <- c(descriptor$payload_manifest_identity$scheme,
+      descriptor$payload_manifest_identity$sha256,
+      payload$payload_manifest_identity$scheme,
+      payload$payload_manifest_identity$sha256)
+    if (length(payload_required) != 4L || anyNA(payload_required) ||
+        any(!nzchar(payload_required))) .gp_equivalence_abort(
+      "EQUIVALENCE_OUTPUT_PAYLOAD_BINDING_MISMATCH", method,
+      paste0("authoritative payload identity is incomplete for ", name))
+    identity <- descriptor$observed_descriptor_identity
+    descriptor_without_identity <- descriptor
+    descriptor_without_identity$observed_descriptor_identity <- NULL
+    .gp_assert_self_identity(method, descriptor_without_identity, identity,
+      paste0("output descriptor ", name))
+    if (!identical(as.character(descriptor$kind),
+        as.character(row$primitive_kind[[1L]])) ||
+        !identical(as.character(descriptor$kind),
+          as.character(payload$primitive_kind))) .gp_equivalence_abort(
+      "EQUIVALENCE_OUTPUT_BINDING_MISMATCH", method,
+      paste0("receipt, payload, and published output kinds differ for ", name))
+    if (!identical(descriptor$content_identity,
+        payload$transition_content_identity) ||
+        !identical(payload$transition_published_content_identity,
+          list(scheme = as.character(row$content_identity_scheme[[1L]]),
+            sha256 = as.character(row$content_sha256[[1L]]))) ||
+        !identical(payload$published_content_identity,
+          list(scheme = as.character(row$content_identity_scheme[[1L]]),
+            sha256 = as.character(row$content_sha256[[1L]]))))
+      .gp_equivalence_abort("EQUIVALENCE_OUTPUT_BINDING_MISMATCH", method,
+        paste0("receipt content is not bound to the published output for ", name))
+    if (!identical(descriptor$payload_manifest_identity,
+        payload$payload_manifest_identity)) .gp_equivalence_abort(
+      "EQUIVALENCE_OUTPUT_PAYLOAD_BINDING_MISMATCH", method,
+      paste0("receipt payload manifest is not independently authenticated for ",
+        name))
+    if (!identical(as.character(row$replay_equivalence_policy[[1L]]),
+          "exact_canonical_value") ||
+        !identical(as.character(row$replay_equivalence_reference[[1L]]),
+          as.character(row$content_sha256[[1L]]))) .gp_equivalence_abort(
+      "EQUIVALENCE_OUTPUT_BINDING_MISMATCH", method,
+      paste0("published replay policy/reference is not content-bound for ", name))
+  }
+  TRUE
+}
+
 .gp_assert_receipt <- function(method, record) {
   transition <- record$transition
   if (!is.list(transition) || !is.list(transition$request) ||
@@ -243,34 +390,8 @@
         as.character(transition$transition_id))) .gp_equivalence_abort(
           "EQUIVALENCE_RECEIPT_MISMATCH", method,
           "transition status, operation authentication, or identity disagrees")
-  observed_outputs <- sort(vapply(receipt$outputs %||% list(), `[[`, "", "name"),
-    method = "radix")
-  expected_outputs <- sort(as.character(record$outputs$output_name), method = "radix")
-  if (!identical(observed_outputs, expected_outputs)) .gp_equivalence_abort(
-    "EQUIVALENCE_RECEIPT_MISMATCH", method,
-    "receipt output set differs from the published run output set")
-  for (item in receipt$outputs %||% list()) {
-    descriptor <- item$descriptor
-    required <- c(descriptor$content_identity$scheme,
-      descriptor$content_identity$sha256,
-      descriptor$payload_manifest_identity$scheme,
-      descriptor$payload_manifest_identity$sha256,
-      descriptor$observed_descriptor_identity$sha256)
-    if (length(required) != 5L || anyNA(required) || any(!nzchar(required)))
-      .gp_equivalence_abort("EQUIVALENCE_RECEIPT_MISMATCH", method,
-        paste0("output receipt identity is incomplete for ", item$name))
-    descriptor_identity <- descriptor$observed_descriptor_identity
-    descriptor$observed_descriptor_identity <- NULL
-    .gp_assert_self_identity(method, descriptor, descriptor_identity,
-      paste0("output descriptor ", item$name))
-  }
-  request_inputs <- sort(vapply(request$inputs %||% list(), `[[`, "", "name"),
-    method = "radix")
-  identity_inputs <- sort(as.character(record$input_identities$input_name),
-    method = "radix")
-  if (!identical(request_inputs, identity_inputs)) .gp_equivalence_abort(
-    "EQUIVALENCE_INPUT_BINDING_MISMATCH", method,
-    "request input descriptors do not cover the authoritative input ledger")
+  .gp_assert_input_bindings(method, request, record)
+  .gp_assert_output_bindings(method, receipt, record)
   if (identical(method, "ucell")) {
     usage <- receipt$typed_slice_usage %||% list()
     if (length(usage) != 1L || !identical(as.character(usage[[1L]]$coverage_status),

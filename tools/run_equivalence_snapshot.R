@@ -25,6 +25,7 @@ if (mode == "old-core") {
   library(scwbGenePrograms)
   manifest_path <- system.file("scworkbench", "operation-pack.json",
     package = "scwbGenePrograms")
+  pack_manifest <- jsonlite::read_json(manifest_path, simplifyVector = FALSE)
   wb_operation_pack_activate(manifest_path, lib.loc = .libPaths())
 }
 
@@ -323,17 +324,150 @@ canonical_binding_rows <- function(details) {
   rows[do.call(order, c(unname(rows), list(na.last = TRUE))), , drop = FALSE]
 }
 
-input_identity_rows <- function(bundle, resolved) {
+authoritative_input_descriptors <- function(bundle, name, resolved) {
+  if (mode != "v3-pack") return(NULL)
+  operation <- Filter(function(x) identical(as.character(x$name), name),
+    pack_manifest$operations)
+  if (length(operation) != 1L) stop("operation declaration is absent or ambiguous")
+  operation <- operation[[1L]]
+  declarations <- stats::setNames(operation$inputs,
+    vapply(operation$inputs, `[[`, character(1), "name"))
+  if (!identical(sort(names(declarations), method = "radix"),
+      sort(names(resolved), method = "radix"))) {
+    stop("resolved inputs differ from the operation declaration")
+  }
+  typed_names <- unique(vapply(operation$typed_slice_reads %||% list(),
+    `[[`, character(1), "input"))
+  bound <- stats::setNames(lapply(names(resolved), function(input_name) {
+    value <- resolved[[input_name]]
+    if (input_name %in% typed_names && identical(value$kind, "matrix") &&
+        is.null(value$values)) {
+      value$cell_id <- fixture_manifest$cells[
+        fixture_manifest$cells %in% wb_cells_with_matrix(bundle,
+          value$matrix_id)]
+      value$feature_id <- wb_feature_ids(bundle, value$matrix_id)
+      value$dimensions <- as.integer(c(length(value$feature_id),
+        length(value$cell_id)))
+      value$storage_profile <- "matrix_backed_chunked_v1"
+      return(value)
+    }
+    getFromNamespace(".wb_operation_pack_v2_bind_inputs", "scworkbench")(
+      bundle, stats::setNames(list(value), input_name),
+      fixture_manifest$cells)[[input_name]]
+  }), names(resolved))
+  descriptors <- lapply(names(bound), function(input_name) {
+    descriptor <- getFromNamespace(".wb_operation_pack_v2_input_descriptor",
+      "scworkbench")(input_name, bound[[input_name]],
+        declarations[[input_name]])$descriptor
+    value <- bound[[input_name]]
+    if (input_name %in% typed_names && identical(value$kind, "matrix") &&
+        is.null(value$values) && nzchar(as.character(value$matrix_id %||% "")[[1L]])) {
+      observed <- getFromNamespace(".wb_prov_payload_identity",
+        "scworkbench")(bundle, value)
+      if (!identical(as.character(observed$verification_status),
+          "content_verified")) stop("typed input is not content verified")
+      descriptor$content_identity <- list(
+        scheme = as.character(observed$content_identity_scheme),
+        sha256 = as.character(observed$content_sha256))
+      descriptor$descriptor_identity <- NULL
+      descriptor$descriptor_identity <- getFromNamespace(
+        ".wb_operation_pack_v2_identity_scoped", "scworkbench")(
+          "scworkbench.operation_pack.input_descriptor.v2",
+          "descriptor excluding descriptor_identity", descriptor)
+    }
+    descriptor
+  })
+  stats::setNames(descriptors, names(bound))
+}
+
+input_identity_rows <- function(bundle, resolved, transition = NULL,
+                                authoritative = NULL) {
   rows <- lapply(names(resolved), function(name) {
     primitive <- resolved[[name]]
     identity <- getFromNamespace(".wb_prov_payload_identity",
       "scworkbench")(bundle, primitive)
-    data.frame(input_name = name, primitive_kind = as.character(primitive$kind),
+    row <- data.frame(input_name = name,
+      primitive_kind = as.character(primitive$kind),
       content_identity_scheme = as.character(identity$content_identity_scheme),
       content_sha256 = as.character(identity$content_sha256),
       stringsAsFactors = FALSE)
+    row$transition_descriptor <- I(list(authoritative[[name]] %||% NULL))
+    row
   })
-  do.call(rbind, rows)
+  result <- do.call(rbind, rows)
+  if (!is.null(transition)) {
+    observed <- stats::setNames(lapply(transition$request$inputs, `[[`,
+      "descriptor"), vapply(transition$request$inputs, `[[`, character(1),
+        "name"))
+    if (anyDuplicated(names(observed)) ||
+        !identical(sort(names(observed), method = "radix"),
+          sort(names(authoritative), method = "radix")) ||
+        any(!vapply(names(authoritative), function(key)
+          identical(authoritative[[key]], observed[[key]]), logical(1)))) {
+      stop("published request inputs differ from independently reconstructed descriptors")
+    }
+  }
+  result
+}
+
+published_payload_records <- function(bundle, transition_path, transition,
+                                      output_rows, promoted) {
+  if (is.null(transition)) return(NULL)
+  plain <- getFromNamespace(".wb_operation_pack_v2_identity_plain",
+    "scworkbench")
+  file_sha <- getFromNamespace(".wb_operation_pack_v2_file_sha256",
+    "scworkbench")
+  prov_identity <- getFromNamespace(".wb_prov_payload_identity",
+    "scworkbench")
+  receipt <- stats::setNames(transition$receipt$outputs,
+    vapply(transition$receipt$outputs, `[[`, character(1), "name"))
+  if (anyDuplicated(names(receipt))) stop("receipt output names are duplicated")
+  rows <- lapply(names(receipt), function(output_name) {
+    item <- receipt[[output_name]]
+    output <- output_rows[as.character(output_rows$output_name) == output_name,
+      , drop = FALSE]
+    promotion <- promoted[as.character(promoted$output) == output_name,
+      , drop = FALSE]
+    if (nrow(output) != 1L || nrow(promotion) != 1L)
+      stop("published output is absent or ambiguous: ", output_name)
+    relative <- paste0("outputs/", output_name, "/payload.rds")
+    payload_path <- file.path(transition_path, relative)
+    if (!file.exists(payload_path)) stop("published transition payload is absent")
+    value <- readRDS(payload_path)
+    kind <- as.character(item$descriptor$kind)
+    transition_content <- plain(paste0("scworkbench.", kind, ".content.v1"),
+      unclass(value))
+    payload_manifest <- plain("scworkbench.operation_pack.payload_manifest.v2",
+      list(path = relative, size = as.numeric(file.info(payload_path)$size),
+        sha256 = file_sha(payload_path)))
+    published <- wb_art_load(bundle, as.character(promotion$artifact_id))
+    transition_durable <- prov_identity(bundle, value)
+    transition_published_content <- list(
+      scheme = as.character(transition_durable$content_identity_scheme),
+      sha256 = as.character(transition_durable$content_sha256))
+    durable <- prov_identity(bundle, published)
+    durable_content <- list(
+      scheme = as.character(durable$content_identity_scheme),
+      sha256 = as.character(durable$content_sha256))
+    expected_durable <- list(
+      scheme = as.character(output$content_identity_scheme),
+      sha256 = as.character(output$content_sha256))
+    if (!identical(item$descriptor$content_identity, transition_content) ||
+        !identical(item$descriptor$payload_manifest_identity,
+          payload_manifest) ||
+        !identical(transition_published_content, expected_durable) ||
+        !identical(durable_content, expected_durable)) {
+      stop("transition payload, durable artifact, and run output disagree: ",
+        output_name)
+    }
+    list(output_name = output_name, primitive_kind = kind,
+      transition_content_identity = transition_content,
+      payload_manifest_identity = payload_manifest,
+      transition_published_content_identity = transition_published_content,
+      published_content_identity = durable_content)
+  })
+  rows[order(vapply(rows, `[[`, character(1), "output_name"),
+    method = "radix")]
 }
 
 registry_binding <- function(bundle, name, resolved, params, transition) {
@@ -390,6 +524,7 @@ snapshot_one <- function(name) {
   sid <- as.character(executed$promotion$provenance_snapshot_id)
   details <- wb_prov_run_details(b, executed$run$run_id, sid)
   transition_record <- NULL
+  transition_path <- NULL
   if (mode == "v3-pack") {
     transition <- executed$run$operation_pack_transition
     transition_path <- file.path(getFromNamespace(
@@ -427,16 +562,21 @@ snapshot_one <- function(name) {
       expected_outputs) &&
     identical(sort(as.character(output_rows$output_name), method = "radix"),
       expected_outputs)
+  authoritative_inputs <- authoritative_input_descriptors(b, name, resolved)
+  payload_records <- published_payload_records(b, transition_path,
+    transition_record, output_rows, promoted)
   list(
     operation_name = as.character(details$run$op_name),
     run = list(params = details$run$params,
       symbolic_inputs = details$run$symbolic_inputs,
       execution_inputs = details$run$execution_inputs),
-    input_identities = input_identity_rows(b, resolved),
+    input_identities = input_identity_rows(b, resolved, transition_record,
+      authoritative_inputs),
     registry_binding = registry_binding(b, name, resolved,
       specs[[name]]$params, transition_record),
     entity_bindings = canonical_binding_rows(details),
     outputs = output_rows,
+    published_payloads = payload_records,
     promotion = list(atomic = promotion_atomic,
       output_names = expected_outputs, snapshot_id = sid),
     transition = transition_record)
