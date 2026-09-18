@@ -96,7 +96,8 @@ dependency <- function(name, probe, requirement_id = paste0(tolower(name), "_run
 core <- dependency("scworkbench", "wb_prim_obs_table", spec = ">=0.1.0,<0.2.0")
 op <- function(name, title, description, runner, inputs, params_schema, policies,
                outputs, dependencies = list(core), closure = NULL, replay = NULL,
-               registry_reads = NULL, typed_slice_reads = NULL, provenance_reads = NULL) {
+               registry_reads = NULL, typed_slice_reads = NULL, provenance_reads = NULL,
+               retained = NULL) {
   out <- list(name = name, qualified_name = paste0("scwbgeneprograms::", name),
     title = title, description = description, runner = runner, inputs = inputs,
     params_schema = params_schema, dimension_policies = policies, outputs = outputs,
@@ -110,6 +111,17 @@ op <- function(name, title, description, runner, inputs, params_schema, policies
   if (!is.null(registry_reads)) out$registry_reads <- registry_reads
   if (!is.null(typed_slice_reads)) out$typed_slice_reads <- typed_slice_reads
   if (!is.null(provenance_reads)) out$provenance_reads <- provenance_reads
+  if (!is.null(retained)) out$retained_parameters <- retained
+  out
+}
+retained <- function(name, source, output = NULL, input = NULL,
+                     parameter = NULL, field = NULL, required = TRUE) {
+  out <- list(name = name, source = source)
+  if (!is.null(output)) out$output <- output
+  if (!is.null(input)) out$input <- input
+  if (!is.null(parameter)) out$parameter <- parameter
+  if (!is.null(field)) out$field <- field
+  if (!isTRUE(required)) out$required <- FALSE
   out
 }
 `%||%` <- function(x, y) if (is.null(x)) y else x
@@ -128,7 +140,9 @@ operations <- list(
     list(family_policy("module_scores", "matrix", groups_parameter = "features",
       name_parameter = "name", missing = "forbidden")),
     list(output("module_scores", "cell_vector_family", value_kind = "continuous")),
-    list(core, dependency("Matrix", "colMeans", spec = ">=1.3.0"))),
+    list(core, dependency("Matrix", "colMeans", spec = ">=1.3.0")),
+    retained = list(
+      retained("module_definitions", "parameter_value", parameter = "features"))),
 
   op("ucell", "UCell Signature Scoring",
     "Rank-based per-cell signature scoring using pack-owned chunking over canonical typed slices.",
@@ -153,7 +167,11 @@ operations <- list(
       chunk_axis = "cells", chunk_size_parameter = "chunk_size",
       call_discipline = "ordered_partition_exactly_once", empty_selection_policy = "reject",
       duplicate_policy = "reject", selection = list(cells = list(policy = "effective_input_axis_v1"),
-        features = list(policy = "effective_input_axis_v1"))))),
+        features = list(policy = "effective_input_axis_v1")))),
+    retained = list(
+      retained("signature_definitions", "parameter_value", parameter = "features"),
+      retained("matrix_id", "output_meta", output = "signature_summary", field = "matrix_id"),
+      retained("n_cells", "output_first_row", output = "signature_summary", field = "n_cells"))),
 
   op("cell_vector_family_reduce", "Reduce Cell Vector Family",
     "Reduce a keyed signal family to labels and deterministic diagnostics.", ".run_family_reduce",
@@ -166,7 +184,10 @@ operations <- list(
       output("score_margin", "cell_vector", value_kind = "continuous"),
       output("abstain_reason", "cell_vector", value_kind = "categorical"),
       output("decision_table", "obs_table", table_type = "cell_vector_family_reduce_decision_table"),
-      output("label_summary", "obs_table", table_type = "cell_vector_family_reduce_summary"))),
+      output("label_summary", "obs_table", table_type = "cell_vector_family_reduce_summary")),
+    retained = list(
+      retained("effective_signal_keys", "output_meta", output = "decision_table", field = "signal_keys"),
+      retained("n_cells", "output_row_count", output = "decision_table"))),
 
   op("cell_vector_family_calibrate", "Calibrate Cell Vector Family",
     "Calibrate each selected signal key independently.", ".run_family_calibrate",
@@ -179,7 +200,11 @@ operations <- list(
     list(output("calibrated_signal", "cell_vector_family", "calibration", value_kind = "continuous"),
       output("calibration_summary", "obs_table", "calibration", "cell_vector_family_calibration_summary")),
     closure = list(calibrated_signal = c("calibrated_signal", "calibration_summary"),
-      calibration_summary = c("calibrated_signal", "calibration_summary"))),
+      calibration_summary = c("calibrated_signal", "calibration_summary")),
+    retained = list(
+      retained("effective_signal_keys", "output_meta", output = "calibration_summary", field = "signal_keys"),
+      retained("n_keys", "output_row_count", output = "calibration_summary"),
+      retained("n_cells_per_key", "output_first_row", output = "calibration_summary", field = "n_cells"))),
 
   op("cell_vector_family_qc", "QC Cell Vector Family",
     "Compute per-key, pairwise, and optional grouped diagnostics.", ".run_family_qc",
@@ -189,7 +214,13 @@ operations <- list(
     lapply(c("key_summary", "pairwise_summary", "group_summary"), table_policy),
     list(output("key_summary", "obs_table", table_type = "cell_vector_family_qc_key_summary"),
       output("pairwise_summary", "obs_table", table_type = "cell_vector_family_qc_pairwise_summary"),
-      output("group_summary", "obs_table", table_type = "cell_vector_family_qc_group_summary"))),
+      output("group_summary", "obs_table", table_type = "cell_vector_family_qc_group_summary")),
+    retained = list(
+      retained("effective_signal_keys", "output_meta", output = "key_summary", field = "signal_keys"),
+      retained("n_keys", "output_row_count", output = "key_summary"),
+      retained("n_cells", "output_first_row", output = "key_summary", field = "n_cells_total"),
+      retained("has_grouping", "output_meta", output = "group_summary", field = "has_grouping"),
+      retained("grouping_levels", "output_meta", output = "group_summary", field = "grouping_levels"))),
 
   op("cell_vector_family_graph_smooth", "Graph Smooth Cell Vector Family",
     "Smooth signal keys over nearest-neighbor geometry with authenticated source ancestry.",
@@ -210,7 +241,13 @@ operations <- list(
       reader = "read_artifact_ancestry", input = "signal",
       activation = "when_resolved_from_artifact", lifecycle_policy = "require_current",
       parameter_assertions = list(artifact_id = "source_signal_artifact_id",
-        run_id = "source_run_id", snapshot_id = "source_snapshot_id")))),
+        run_id = "source_run_id", snapshot_id = "source_snapshot_id"))),
+    retained = list(
+      retained("effective_signal_keys", "output_meta", output = "smoothing_summary", field = "selected_keys"),
+      retained("n_keys", "output_row_count", output = "smoothing_summary"),
+      retained("n_cells", "output_first_row", output = "smoothing_summary", field = "n_cells"),
+      retained("source_space_id", "output_meta", output = "smoothing_summary", field = "source_space_id"),
+      retained("smoothing_method", "output_meta", output = "smoothing_summary", field = "smoothing_method"))),
 
   op("cell_vector_winners", "Cell Vector Winner Assignment",
     "Assign deterministic winners and pruning diagnostics from a signal family.",
@@ -218,7 +255,12 @@ operations <- list(
     schema(list(signal_keys = strings(), min_winners = integer(10L, 0L, 100000000L, FALSE),
       tie_method = string("first", c("first", "last"), FALSE),
       source_score_artifact_id = string(), source_run_id = string(), source_snapshot_id = string())),
-    list(table_policy("winners")), list(output("winners", "obs_table", table_type = "cell_vector_winners"))),
+    list(table_policy("winners")), list(output("winners", "obs_table", table_type = "cell_vector_winners")),
+    retained = list(
+      retained("effective_signal_keys", "output_meta", output = "winners", field = "vector_order"),
+      retained("n_cells", "output_row_count", output = "winners"),
+      retained("winner_method", "output_meta", output = "winners", field = "winner_method"),
+      retained("confidence_method", "output_meta", output = "winners", field = "confidence_method"))),
 
   op("winner_cell_sets", "Winner Cell-Set Registration",
     "Request atomic core-owned admission of the complete winner-derived cell-set family.",
@@ -232,7 +274,9 @@ operations <- list(
         profile = "cell_set_family_admission_v1")),
     closure = list(manifest = c("cell_set_family", "manifest")),
     replay = list(manifest = "exact_canonical_value",
-      cell_set_family = "exact_family_membership_and_order")),
+      cell_set_family = "exact_family_membership_and_order"),
+    retained = list(
+      retained("n_cell_sets", "output_row_count", output = "manifest"))),
 
   op("feature_set_overlap_qc", "Feature-Set Matrix Overlap QC",
     "Screen authenticated feature-set-registry entries against a matrix universe.",
@@ -249,7 +293,12 @@ operations <- list(
       kind = "feature_set_registry", reader = "read_feature_set_registry", matrix_input = "matrix",
       namespace_parameter = "namespace", namespaces_parameter = "namespaces",
       feature_sets_parameter = "feature_sets", no_selector_policy = "all_namespaces",
-      empty_match_policy = "error"))),
+      empty_match_policy = "error")),
+    retained = list(
+      retained("matrix_id", "output_meta", output = "overlap_qc", field = "matrix_id"),
+      retained("effective_namespaces", "output_meta", output = "overlap_qc", field = "namespaces"),
+      retained("operation_marker", "output_meta", output = "overlap_qc", field = "op"),
+      retained("effective_max_set_size", "output_meta", output = "overlap_qc", field = "max_set_size"))),
 
   op("pathway_enrich", "Pathway Enrichment",
     "Hypergeometric enrichment against an authenticated feature-set namespace snapshot.",
@@ -265,7 +314,12 @@ operations <- list(
     registry_reads = list(list(name = "feature_sets", category = "authenticated_core_registry_snapshot",
       kind = "feature_set_registry", reader = "read_feature_set_registry", matrix_input = "matrix",
       namespace_parameter = "namespace", no_selector_policy = "all_namespaces",
-      empty_match_policy = "error")))
+      empty_match_policy = "error")),
+    retained = list(
+      retained("matrix_id", "output_meta", output = "pathways", field = "matrix_id"),
+      retained("n_query", "output_meta", output = "pathways", field = "query_size"),
+      retained("n_universe", "output_meta", output = "pathways", field = "universe_size"),
+      retained("n_pathways", "output_row_count", output = "pathways")))
 )
 
 manifest <- list(schema_version = "scworkbench.operation_pack.v3",

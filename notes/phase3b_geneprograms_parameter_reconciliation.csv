@@ -1,0 +1,101 @@
+method,legacy_field,v3_evidence,comparison,status,scientific_consequence
+addmodulescore,matrix_id,symbolic_inputs.matrix,string identity,exact,bound matrix unchanged
+addmodulescore,n_modules,retained module_definitions,names count,exact,module count unchanged
+addmodulescore,module_names,retained module_definitions,ordered names,exact,module names and order unchanged
+addmodulescore,n_cells,execution_inputs.effective_n,integer,exact,effective cell universe unchanged
+addmodulescore,nbin,run.params.nbin,integer,exact,binning control unchanged
+addmodulescore,ctrl,run.params.ctrl,integer,exact,control sampling size unchanged
+addmodulescore,seed,run.params.seed,integer,exact,randomization seed unchanged
+addmodulescore,features,symbolic_inputs.features,canonical JSON,exact,requested module membership unchanged
+addmodulescore,pool,symbolic_inputs.pool,canonical JSON,exact,control universe unchanged
+addmodulescore,name,symbolic_inputs.name,string,exact,module naming rule unchanged
+ucell,matrix_id,run.params.matrix_id,string identity,exact,bound matrix unchanged
+ucell,n_signatures,retained signature_definitions,names count,exact,signature count unchanged
+ucell,signature_names,retained signature_definitions,ordered names,exact,signature names and order unchanged
+ucell,n_cells,run.params.n_cells,integer,exact,effective cell universe unchanged
+ucell,max_rank,run.params.max_rank,integer,exact,ranking cutoff unchanged
+ucell,ncores,run.params.ncores,integer,exact,execution control unchanged
+ucell,parallel_backend,run.params.parallel_backend,string,exact,backend selection unchanged
+ucell,missing_features_policy,run.params.missing_features_policy,string,exact,missing-feature policy unchanged
+ucell,chunking,typed_slice_usage receipt,enabled axis size and count,exact,chunk schedule unchanged
+ucell,chunk_sizes,typed_slice_usage.calls.cell_count,ordered integer vector,exact,observed batch sizes unchanged
+ucell,features,symbolic_inputs.features,canonical JSON,exact,signature membership unchanged
+ucell,name,symbolic_inputs.name,string,exact,signature naming rule unchanged
+cell_vector_family_reduce,rule,run.params.rule,string,exact,reduction rule unchanged
+cell_vector_family_reduce,signal_keys,run.params.effective_signal_keys,ordered strings,exact,effective key selection unchanged
+cell_vector_family_reduce,n_keys,retained effective_signal_keys,length,exact,effective key count unchanged
+cell_vector_family_reduce,n_cells,run.params.n_cells,integer,exact,effective cell universe unchanged
+cell_vector_family_reduce,n_unknown,terminal canonical identities,not duplicated as effective parameter,diagnostic_only,legacy output diagnostic remains recoverable from exact terminals
+cell_vector_family_reduce,min_score,symbolic_inputs.min_score,canonical nullable value,exact,threshold unchanged
+cell_vector_family_reduce,min_margin,run.params.min_margin,number,exact,margin threshold unchanged
+cell_vector_family_reduce,unknown_label,run.params.unknown_label,string,exact,abstention label unchanged
+cell_vector_family_reduce,ties,run.params.ties,string,exact,tie policy unchanged
+cell_vector_family_reduce,tie_tol,run.params.tie_tol,number,exact,tie tolerance unchanged
+cell_vector_family_calibrate,method,run.params.method,string,exact,calibration method unchanged
+cell_vector_family_calibrate,signal_keys,run.params.effective_signal_keys,ordered strings,exact,effective key selection unchanged
+cell_vector_family_calibrate,n_keys,run.params.n_keys,integer,exact,effective key count unchanged
+cell_vector_family_calibrate,n_rows,n_keys times n_cells_per_key,integer product,exact,effective row count unchanged
+cell_vector_family_calibrate,center,run.params.center,boolean,exact,centering control unchanged
+cell_vector_family_calibrate,scale,run.params.scale,boolean,exact,scaling control unchanged
+cell_vector_family_calibrate,ties_method,run.params.ties_method,string,exact,rank tie method unchanged
+cell_vector_family_calibrate,na_rm,run.params.na_rm,boolean,exact,missing-value handling unchanged
+cell_vector_family_qc,signal_keys,run.params.effective_signal_keys,ordered strings,exact,effective key selection unchanged
+cell_vector_family_qc,n_keys,run.params.n_keys,integer,exact,effective key count unchanged
+cell_vector_family_qc,n_cells,run.params.n_cells,integer,exact,effective cell universe unchanged
+cell_vector_family_qc,has_grouping,run.params.has_grouping,boolean,exact,grouping presence unchanged
+cell_vector_family_qc,n_groups,retained grouping_levels,length,exact,group count unchanged
+cell_vector_family_qc,correlation_methods,run.params.correlation_methods,ordered strings,exact,correlation methods unchanged
+cell_vector_family_qc,tie_tol,run.params.tie_tol,number,exact,tie tolerance unchanged
+cell_vector_family_graph_smooth,signal_keys,run.params.effective_signal_keys,ordered strings,exact,effective key selection unchanged
+cell_vector_family_graph_smooth,n_keys,run.params.n_keys,integer,exact,effective key count unchanged
+cell_vector_family_graph_smooth,n_cells,run.params.n_cells,integer,exact,effective cell universe unchanged
+cell_vector_family_graph_smooth,source_space_id,run.params.source_space_id,string identity,exact,geometry source unchanged
+cell_vector_family_graph_smooth,dims,symbolic_inputs.dims,canonical nullable value,exact,dimension selection unchanged
+cell_vector_family_graph_smooth,k,run.params.k,integer,exact,neighbor count unchanged
+cell_vector_family_graph_smooth,alpha,run.params.alpha,number,exact,smoothing blend unchanged
+cell_vector_family_graph_smooth,smoothing_method,run.params.smoothing_method,string,exact,smoothing algorithm unchanged
+cell_vector_family_graph_smooth,distance_metric,run.params.distance_metric,string,exact,distance metric unchanged
+cell_vector_family_graph_smooth,query_chunk_size,run.params.query_chunk_size,integer,exact,query batching unchanged
+cell_vector_family_graph_smooth,include_self,run.params.include_self,boolean,exact,self-neighbor policy unchanged
+cell_vector_family_graph_smooth,na_policy,run.params.na_policy,string,exact,missing-value policy unchanged
+cell_vector_family_graph_smooth,source_ancestry,authenticated provenance-read receipt,descriptor and snapshot identities,exact,source artifact run and snapshot remain bound
+cell_vector_winners,signal_keys,run.params.effective_signal_keys,ordered strings,exact,effective key selection unchanged
+cell_vector_winners,n_keys,retained effective_signal_keys,length,exact,effective key count unchanged
+cell_vector_winners,n_cells,run.params.n_cells,integer,exact,effective cell universe unchanged
+cell_vector_winners,min_winners,run.params.min_winners,integer,exact,pruning threshold unchanged
+cell_vector_winners,tie_method,run.params.tie_method,string,exact,tie policy unchanged
+cell_vector_winners,winner_method,run.params.winner_method,string,exact,winner algorithm unchanged
+cell_vector_winners,confidence_method,run.params.confidence_method,string,exact,confidence algorithm unchanged
+cell_vector_winners,n_winners_kept,terminal canonical identity,not duplicated as effective parameter,diagnostic_only,legacy output diagnostic remains recoverable from exact terminal
+cell_vector_winners,n_winners_dropped,terminal canonical identity,not duplicated as effective parameter,diagnostic_only,legacy output diagnostic remains recoverable from exact terminal
+winner_cell_sets,source_winner_artifact_id,run.params.source_winner_artifact_id,string identity,exact,source winner artifact unchanged
+winner_cell_sets,cell_set_prefix,run.params.cell_set_prefix,string,exact,set naming unchanged
+winner_cell_sets,winner_col,run.params.winner_col,string,exact,winner column unchanged
+winner_cell_sets,passes_col,run.params.passes_col,string,exact,pruning column unchanged
+winner_cell_sets,source,run.params.source,string,exact,source label unchanged
+winner_cell_sets,replace,run.params.replace,boolean,exact,registry mutation mode unchanged
+winner_cell_sets,n_cell_sets,run.params.n_cell_sets,integer,exact,family cardinality unchanged
+feature_set_overlap_qc,matrix_id,run.params.matrix_id,string identity,exact,bound matrix unchanged
+feature_set_overlap_qc,namespaces,run.params.effective_namespaces,ordered strings,exact,resolved namespace selection unchanged
+feature_set_overlap_qc,op,run.params.operation_marker,string,exact,operation marker unchanged
+feature_set_overlap_qc,min_set_size,run.params.min_set_size,integer,exact,lower size threshold unchanged
+feature_set_overlap_qc,max_set_size,run.params.effective_max_set_size,canonical scalar,exact,upper size threshold unchanged
+feature_set_overlap_qc,min_detected_fraction,run.params.min_detected_fraction,number,exact,detection threshold unchanged
+feature_set_overlap_qc,deduplicate_sets,run.params.deduplicate_sets,boolean,exact,deduplication policy unchanged
+feature_set_overlap_qc,registry_source,authenticated registry-read receipt,content source ancestry and manifest identities,exact,registry snapshot unchanged
+pathway_enrich,matrix_id,run.params.matrix_id,string identity,exact,bound matrix unchanged
+pathway_enrich,namespace,run.params.namespace,string,exact,pathway namespace unchanged
+pathway_enrich,n_query,run.params.n_query,integer,exact,filtered query size unchanged
+pathway_enrich,n_universe,run.params.n_universe,integer,exact,test universe size unchanged
+pathway_enrich,n_pathways,run.params.n_pathways,integer,exact,tested pathway count unchanged
+pathway_enrich,direction,run.params.direction,string,exact,direction policy unchanged
+pathway_enrich,p_adj_max,run.params.p_adj_max,number,exact,adjusted-p threshold unchanged
+pathway_enrich,min_set_size,run.params.min_set_size,integer,exact,lower set threshold unchanged
+pathway_enrich,max_set_size,run.params.max_set_size,integer,exact,upper set threshold unchanged
+pathway_enrich,p_adjust_method,run.params.p_adjust_method,string,exact,multiple-testing method unchanged
+pathway_enrich,feature_col,symbolic_inputs.feature_col,string,exact,feature identifier binding unchanged
+pathway_enrich,p_adj_col,symbolic_inputs.p_adj_col,string,exact,p-value column binding unchanged
+pathway_enrich,lfc_col,symbolic_inputs.lfc_col,string,exact,effect column binding unchanged
+pathway_enrich,lfc_min_abs,symbolic_inputs.lfc_min_abs,number,exact,absolute effect threshold unchanged
+pathway_enrich,lfc_min,symbolic_inputs.lfc_min,number,exact,directional effect threshold unchanged
+pathway_enrich,registry_source,authenticated registry-read receipt,content source ancestry and manifest identities,exact,registry snapshot unchanged

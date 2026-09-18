@@ -152,6 +152,37 @@ test_geneprogram_pathway_enrich_contract <- function() {
   TRUE
 }
 
+test_geneprogram_retained_parameter_declarations_contract <- function() {
+  path <- system.file("scworkbench", "operation-pack.json",
+    package = "scwbGenePrograms")
+  manifest <- jsonlite::read_json(path, simplifyVector = FALSE)
+  operations <- stats::setNames(manifest$operations,
+    vapply(manifest$operations, `[[`, "", "name"))
+  expected <- list(
+    addmodulescore = c("module_definitions"),
+    ucell = c("signature_definitions", "matrix_id", "n_cells"),
+    cell_vector_family_reduce = c("effective_signal_keys", "n_cells"),
+    cell_vector_family_calibrate = c("effective_signal_keys", "n_keys",
+      "n_cells_per_key"),
+    cell_vector_family_qc = c("effective_signal_keys", "n_keys", "n_cells",
+      "has_grouping", "grouping_levels"),
+    cell_vector_family_graph_smooth = c("effective_signal_keys", "n_keys",
+      "n_cells", "source_space_id", "smoothing_method"),
+    cell_vector_winners = c("effective_signal_keys", "n_cells",
+      "winner_method", "confidence_method"),
+    winner_cell_sets = c("n_cell_sets"),
+    feature_set_overlap_qc = c("matrix_id", "effective_namespaces",
+      "operation_marker", "effective_max_set_size"),
+    pathway_enrich = c("matrix_id", "n_query", "n_universe", "n_pathways"))
+  for (name in names(expected)) {
+    retained <- operations[[name]]$retained_parameters
+    if (is.null(retained)) retained <- list()
+    observed <- vapply(retained, `[[`, "", "name")
+    stopifnot(identical(observed, expected[[name]]))
+  }
+  TRUE
+}
+
 test_geneprogram_bounded_family_axis_fail_closed_contract <- function() {
   registry <- getFromNamespace(".wb_operation_pack_registry", "scworkbench")
   name <- "scwbgeneprograms::addmodulescore"

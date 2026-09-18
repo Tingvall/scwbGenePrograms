@@ -156,6 +156,13 @@
       "replay_equivalence": {
         "module_scores": "exact_canonical_value"
       },
+      "retained_parameters": [
+        {
+          "name": "module_definitions",
+          "source": "parameter_value",
+          "parameter": "features"
+        }
+      ],
       "public_interface": {
         "intent": [
           "expression",
@@ -416,6 +423,25 @@
               "policy": "effective_input_axis_v1"
             }
           }
+        }
+      ],
+      "retained_parameters": [
+        {
+          "name": "signature_definitions",
+          "source": "parameter_value",
+          "parameter": "features"
+        },
+        {
+          "name": "matrix_id",
+          "source": "output_meta",
+          "output": "signature_summary",
+          "field": "matrix_id"
+        },
+        {
+          "name": "n_cells",
+          "source": "output_first_row",
+          "output": "signature_summary",
+          "field": "n_cells"
         }
       ],
       "public_interface": {
@@ -719,6 +745,19 @@
         "decision_table": "exact_canonical_value",
         "label_summary": "exact_canonical_value"
       },
+      "retained_parameters": [
+        {
+          "name": "effective_signal_keys",
+          "source": "output_meta",
+          "output": "decision_table",
+          "field": "signal_keys"
+        },
+        {
+          "name": "n_cells",
+          "source": "output_row_count",
+          "output": "decision_table"
+        }
+      ],
       "public_interface": {
         "intent": [
           "label",
@@ -928,6 +967,25 @@
         "calibrated_signal": "exact_canonical_value",
         "calibration_summary": "exact_canonical_value"
       },
+      "retained_parameters": [
+        {
+          "name": "effective_signal_keys",
+          "source": "output_meta",
+          "output": "calibration_summary",
+          "field": "signal_keys"
+        },
+        {
+          "name": "n_keys",
+          "source": "output_row_count",
+          "output": "calibration_summary"
+        },
+        {
+          "name": "n_cells_per_key",
+          "source": "output_first_row",
+          "output": "calibration_summary",
+          "field": "n_cells"
+        }
+      ],
       "public_interface": {
         "intent": [
           "signal",
@@ -1109,6 +1167,37 @@
         "pairwise_summary": "exact_canonical_value",
         "group_summary": "exact_canonical_value"
       },
+      "retained_parameters": [
+        {
+          "name": "effective_signal_keys",
+          "source": "output_meta",
+          "output": "key_summary",
+          "field": "signal_keys"
+        },
+        {
+          "name": "n_keys",
+          "source": "output_row_count",
+          "output": "key_summary"
+        },
+        {
+          "name": "n_cells",
+          "source": "output_first_row",
+          "output": "key_summary",
+          "field": "n_cells_total"
+        },
+        {
+          "name": "has_grouping",
+          "source": "output_meta",
+          "output": "group_summary",
+          "field": "has_grouping"
+        },
+        {
+          "name": "grouping_levels",
+          "source": "output_meta",
+          "output": "group_summary",
+          "field": "grouping_levels"
+        }
+      ],
       "public_interface": {
         "intent": [
           "signal",
@@ -1347,6 +1436,37 @@
           }
         }
       ],
+      "retained_parameters": [
+        {
+          "name": "effective_signal_keys",
+          "source": "output_meta",
+          "output": "smoothing_summary",
+          "field": "selected_keys"
+        },
+        {
+          "name": "n_keys",
+          "source": "output_row_count",
+          "output": "smoothing_summary"
+        },
+        {
+          "name": "n_cells",
+          "source": "output_first_row",
+          "output": "smoothing_summary",
+          "field": "n_cells"
+        },
+        {
+          "name": "source_space_id",
+          "source": "output_meta",
+          "output": "smoothing_summary",
+          "field": "source_space_id"
+        },
+        {
+          "name": "smoothing_method",
+          "source": "output_meta",
+          "output": "smoothing_summary",
+          "field": "smoothing_method"
+        }
+      ],
       "public_interface": {
         "intent": [
           "signal",
@@ -1522,6 +1642,31 @@
       "replay_equivalence": {
         "winners": "exact_canonical_value"
       },
+      "retained_parameters": [
+        {
+          "name": "effective_signal_keys",
+          "source": "output_meta",
+          "output": "winners",
+          "field": "vector_order"
+        },
+        {
+          "name": "n_cells",
+          "source": "output_row_count",
+          "output": "winners"
+        },
+        {
+          "name": "winner_method",
+          "source": "output_meta",
+          "output": "winners",
+          "field": "winner_method"
+        },
+        {
+          "name": "confidence_method",
+          "source": "output_meta",
+          "output": "winners",
+          "field": "confidence_method"
+        }
+      ],
       "public_interface": {
         "intent": [
           "signal",
@@ -1675,6 +1820,13 @@
         "manifest": "exact_canonical_value",
         "cell_set_family": "exact_family_membership_and_order"
       },
+      "retained_parameters": [
+        {
+          "name": "n_cell_sets",
+          "source": "output_row_count",
+          "output": "manifest"
+        }
+      ],
       "public_interface": {
         "intent": [
           "signal",
@@ -1866,6 +2018,32 @@
           "feature_sets_parameter": "feature_sets",
           "no_selector_policy": "all_namespaces",
           "empty_match_policy": "error"
+        }
+      ],
+      "retained_parameters": [
+        {
+          "name": "matrix_id",
+          "source": "output_meta",
+          "output": "overlap_qc",
+          "field": "matrix_id"
+        },
+        {
+          "name": "effective_namespaces",
+          "source": "output_meta",
+          "output": "overlap_qc",
+          "field": "namespaces"
+        },
+        {
+          "name": "operation_marker",
+          "source": "output_meta",
+          "output": "overlap_qc",
+          "field": "op"
+        },
+        {
+          "name": "effective_max_set_size",
+          "source": "output_meta",
+          "output": "overlap_qc",
+          "field": "max_set_size"
         }
       ],
       "public_interface": {
@@ -2065,6 +2243,31 @@
           "namespace_parameter": "namespace",
           "no_selector_policy": "all_namespaces",
           "empty_match_policy": "error"
+        }
+      ],
+      "retained_parameters": [
+        {
+          "name": "matrix_id",
+          "source": "output_meta",
+          "output": "pathways",
+          "field": "matrix_id"
+        },
+        {
+          "name": "n_query",
+          "source": "output_meta",
+          "output": "pathways",
+          "field": "query_size"
+        },
+        {
+          "name": "n_universe",
+          "source": "output_meta",
+          "output": "pathways",
+          "field": "universe_size"
+        },
+        {
+          "name": "n_pathways",
+          "source": "output_row_count",
+          "output": "pathways"
         }
       ],
       "public_interface": {
